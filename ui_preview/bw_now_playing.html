@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390px, initial-scale=1.0">
+<title>AuraMusic - Now Playing (Volt Neon)</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #09090C;
+    --surface: rgba(18, 18, 22, 0.85);
+    --border: rgba(255, 255, 255, 0.08);
+    --accent: #D2F535;
+    --accent-glow: rgba(210, 245, 53, 0.35);
+    --white: #FFFFFF;
+    --gray: rgba(255, 255, 255, 0.45);
+    --gray-dim: #18181F;
+  }
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    width: 390px;
+    min-height: 844px;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Ambient backdrop glows */
+  body::before {
+    content: '';
+    position: absolute;
+    top: -50px;
+    left: -50px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: absolute;
+    bottom: 50px;
+    right: -50px;
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(210, 245, 53, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Atmospheric glow behind album art */
+  .atmosphere {
+    position: absolute;
+    top: 180px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(ellipse at center, rgba(139,92,246,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .screen {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 844px;
+    padding-bottom: 32px;
+  }
+
+  /* TOP BAR */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 52px 24px 16px;
+  }
+  .top-bar .icon-btn {
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--white);
+    cursor: pointer;
+  }
+  .top-bar .icon-btn svg { width: 24px; height: 24px; }
+  .now-playing-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    color: var(--gray);
+    text-transform: uppercase;
+  }
+
+  /* ALBUM ART */
+  .album-section {
+    padding: 24px 32px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .album-art-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 280px;
+  }
+  .album-art {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #121212 0%, #202020 50%, #050505 100%);
+    position: relative;
+    overflow: hidden;
+    animation: float 6s ease-in-out infinite;
+    box-shadow: 0 16px 80px rgba(0,0,0,0.8), 0 0 40px rgba(139, 92, 246, 0.15);
+    border: 3px solid rgba(255,255,255,0.08);
+  }
+  .album-art-inner {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background:
+      radial-gradient(ellipse at 30% 40%, rgba(210,245,53,0.15) 0%, transparent 60%),
+      radial-gradient(ellipse at 75% 70%, rgba(139,92,246,0.2) 0%, transparent 50%),
+      linear-gradient(220deg, #1c1c1e, #0a0a0c, #111116);
+  }
+  .album-art-lines {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background-image:
+      linear-gradient(45deg, transparent 48%, rgba(255,255,255,0.03) 49%, rgba(255,255,255,0.03) 51%, transparent 52%),
+      linear-gradient(-30deg, transparent 65%, rgba(255,255,255,0.02) 66%, rgba(255,255,255,0.02) 67%, transparent 68%);
+  }
+  .album-glow {
+    position: absolute;
+    bottom: -30px;
+    left: 50%; transform: translateX(-50%);
+    width: 80%; height: 60px;
+    background: radial-gradient(ellipse at center, rgba(139,92,246,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+  }
+
+  /* SONG INFO */
+  .song-info {
+    padding: 40px 24px 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .song-meta { flex: 1; }
+  .song-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--white);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+  .song-artist {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--gray);
+    margin-top: 6px;
+    letter-spacing: -0.01em;
+  }
+  .hi-res-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.7);
+    letter-spacing: 0.1em;
+    margin-top: 10px;
+  }
+  .like-btn {
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .like-btn svg { width: 24px; height: 24px; }
+
+  /* PROGRESS */
+  .progress-section {
+    padding: 24px 24px 0;
+  }
+  .progress-track {
+    width: 100%; height: 3px;
+    background: var(--gray-dim);
+    border-radius: 99px;
+    position: relative;
+    cursor: pointer;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 47%;
+    background: var(--accent);
+    border-radius: 99px;
+    position: relative;
+  }
+  .progress-thumb {
+    position: absolute;
+    right: -5px; top: 50%;
+    transform: translateY(-50%);
+    width: 10px; height: 10px;
+    background: var(--white);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--accent);
+  }
+  .progress-times {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+  .time-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--gray);
+  }
+
+  /* CONTROLS */
+  .controls {
+    padding: 28px 24px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .ctrl-btn {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--gray);
+    transition: color 0.2s;
+  }
+  .ctrl-btn:hover { color: var(--white); }
+  .ctrl-btn svg { width: 22px; height: 22px; }
+  .ctrl-btn.primary { color: var(--white); }
+  .ctrl-btn.primary svg { width: 26px; height: 26px; }
+  .play-btn {
+    width: 72px; height: 72px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0 20px var(--accent-glow);
+    animation: pulse-glow-volt 2.5s ease-in-out infinite;
+    transition: transform 0.1s;
+  }
+  .play-btn:active { transform: scale(0.95); }
+  .play-btn svg { width: 30px; height: 30px; color: #000000; }
+  @keyframes pulse-glow-volt {
+    0%, 100% { box-shadow: 0 0 20px rgba(210, 245, 53, 0.35), 0 0 40px rgba(210, 245, 53, 0.15); }
+    50% { box-shadow: 0 0 30px rgba(210, 245, 53, 0.55), 0 0 60px rgba(210, 245, 53, 0.25); }
+  }
+
+  /* SECONDARY CONTROLS */
+  .secondary-controls {
+    padding: 20px 24px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+  }
+  .sec-btn {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--gray);
+    position: relative;
+  }
+  .sec-btn svg { width: 20px; height: 20px; }
+  .sec-btn.active { color: var(--accent); }
+  .active-dot {
+    position: absolute;
+    bottom: 6px; left: 50%;
+    transform: translateX(-50%);
+    width: 4px; height: 4px;
+    background: var(--accent);
+    border-radius: 50%;
+  }
+
+  /* WAVEFORM */
+  .waveform {
+    padding: 24px 24px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 48px;
+  }
+  .wave-bar {
+    width: 3px;
+    background: var(--accent);
+    border-radius: 2px;
+    opacity: 0.8;
+    animation: wave 1.2s ease-in-out infinite;
+  }
+  .wave-bar:nth-child(1)  { height: 12px; animation-delay: 0s; }
+  .wave-bar:nth-child(2)  { height: 22px; animation-delay: 0.1s; }
+  .wave-bar:nth-child(3)  { height: 30px; animation-delay: 0.2s; }
+  .wave-bar:nth-child(4)  { height: 18px; animation-delay: 0.15s; }
+  .wave-bar:nth-child(5)  { height: 34px; animation-delay: 0.05s; }
+  .wave-bar:nth-child(6)  { height: 24px; animation-delay: 0.25s; }
+  .wave-bar:nth-child(7)  { height: 38px; animation-delay: 0.1s; }
+  .wave-bar:nth-child(8)  { height: 28px; animation-delay: 0.3s; }
+  .wave-bar:nth-child(9)  { height: 32px; animation-delay: 0.08s; }
+  .wave-bar:nth-child(10) { height: 20px; animation-delay: 0.18s; }
+  .wave-bar:nth-child(11) { height: 36px; animation-delay: 0.12s; }
+  .wave-bar:nth-child(12) { height: 26px; animation-delay: 0.22s; }
+  .wave-bar:nth-child(13) { height: 40px; animation-delay: 0.07s; }
+  .wave-bar:nth-child(14) { height: 22px; animation-delay: 0.28s; }
+  .wave-bar:nth-child(15) { height: 16px; animation-delay: 0.14s; }
+  .wave-bar:nth-child(16) { height: 30px; animation-delay: 0.35s; }
+  .wave-bar:nth-child(17) { height: 24px; animation-delay: 0.06s; }
+  .wave-bar:nth-child(18) { height: 18px; animation-delay: 0.2s; }
+  .wave-bar:nth-child(19) { height: 28px; animation-delay: 0.16s; }
+  .wave-bar:nth-child(20) { height: 14px; animation-delay: 0.32s; }
+  @keyframes wave {
+    0%, 100% { transform: scaleY(1); opacity: 0.6; }
+    50% { transform: scaleY(0.4); opacity: 1.0; }
+  }
+
+  /* QUEUE HANDLE */
+  .queue-handle {
+    margin: 20px 24px 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+  }
+  .queue-handle-left {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .queue-handle-pill {
+    width: 32px; height: 4px;
+    background: var(--border);
+    border-radius: 99px;
+  }
+  .queue-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--gray);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .queue-handle svg { width: 18px; height: 18px; color: var(--gray); }
+</style>
+</head>
+<body>
+<div class="atmosphere"></div>
+<div class="screen">
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="icon-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+    </div>
+    <span class="now-playing-label">Now Playing</span>
+    <div class="icon-btn">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- ALBUM ART -->
+  <div class="album-section">
+    <div class="album-art-wrapper">
+      <div class="album-art">
+        <div class="album-art-inner"></div>
+        <div class="album-art-lines"></div>
+      </div>
+      <div class="album-glow"></div>
+    </div>
+  </div>
+
+  <!-- SONG INFO -->
+  <div class="song-info">
+    <div class="song-meta">
+      <div class="song-title">Starlit Reverie</div>
+      <div class="song-artist">Budiarti x Laimag-rb</div>
+      <div class="hi-res-badge">24-BIT LOSSLESS FLAC</div>
+    </div>
+    <div class="like-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-section">
+    <div class="progress-track">
+      <div class="progress-fill">
+        <div class="progress-thumb"></div>
+      </div>
+    </div>
+    <div class="progress-times">
+      <span class="time-label">0:28</span>
+      <span class="time-label">3:15</span>
+    </div>
+  </div>
+
+  <!-- MAIN CONTROLS -->
+  <div class="controls">
+    <div class="ctrl-btn active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+        <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+      </svg>
+    </div>
+    <div class="ctrl-btn primary">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="play-btn">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <polygon points="6 4 20 12 6 20 6 4"/>
+      </svg>
+    </div>
+    <div class="ctrl-btn primary">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="ctrl-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+        <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- SECONDARY CONTROLS -->
+  <div class="secondary-controls">
+    <div class="sec-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      </svg>
+    </div>
+    <div class="sec-btn active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round">
+        <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+      </svg>
+      <div class="active-dot"></div>
+    </div>
+    <div class="sec-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+        <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+      </svg>
+    </div>
+    <div class="sec-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+        <line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- WAVEFORM -->
+  <div class="waveform">
+    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+    <div class="wave-bar"></div><div class="wave-bar"></div>
+  </div>
+
+  <!-- QUEUE HANDLE -->
+  <div class="queue-handle">
+    <div class="queue-handle-left">
+      <div class="queue-handle-pill"></div>
+      <span class="queue-label">Up Next</span>
+    </div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+      <polyline points="18 15 12 9 6 15"/>
+    </svg>
+  </div>
+
+</div>
+</body>
+</html>

@@ -149,7 +149,7 @@ fun QuickPicksSection(
                 .fillMaxSize()
                 .maskClip(MaterialTheme.shapes.extraLarge)
                 .maskBorder(
-                    BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
                     MaterialTheme.shapes.extraLarge
                 )
                 .combinedClickable(

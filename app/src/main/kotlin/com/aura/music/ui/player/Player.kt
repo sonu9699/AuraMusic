@@ -10,9 +10,28 @@ package com.aura.music.ui.player
 
 import android.content.ClipboardManager
 import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.RenderEffect
+import android.graphics.Shader
+import android.os.Build
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.Canvas
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -328,6 +347,7 @@ fun BottomSheetPlayer(
             PlayerBackgroundStyle.GLOW -> Color.White
             PlayerBackgroundStyle.GLOW_ANIMATED -> Color.White
             PlayerBackgroundStyle.CUSTOM -> Color.White
+            PlayerBackgroundStyle.LIQUID_GOOEY -> Color.White
         }
 
     val icBackgroundColor =
@@ -340,6 +360,7 @@ fun BottomSheetPlayer(
             PlayerBackgroundStyle.GLOW -> Color.Black
             PlayerBackgroundStyle.GLOW_ANIMATED -> Color.Black
             PlayerBackgroundStyle.CUSTOM -> Color.Black
+            PlayerBackgroundStyle.LIQUID_GOOEY -> Color.Black
         }
 
     val (textButtonColor, iconButtonColor) = when (playerButtonsStyle) {
@@ -373,6 +394,64 @@ fun BottomSheetPlayer(
                     }
                 delay(1000L)
             }
+        }
+    }
+
+    val (shakeToShuffle) = rememberPreference(
+        com.aura.music.constants.ShakeToShuffleKey,
+        defaultValue = true
+    )
+    var showShuffleHud by remember { mutableStateOf(false) }
+
+    val isPlayerExpanded = !state.isCollapsed
+    LaunchedEffect(isPlayerExpanded, shakeToShuffle) {
+        if (!isPlayerExpanded || !shakeToShuffle) return@LaunchedEffect
+        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager ?: return@LaunchedEffect
+        val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) ?: return@LaunchedEffect
+
+        var lastShakeTime = 0L
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent?) {
+                if (event == null) return
+                val x = event.values[0]
+                val y = event.values[1]
+                val z = event.values[2]
+
+                val gX = x / SensorManager.GRAVITY_EARTH
+                val gY = y / SensorManager.GRAVITY_EARTH
+                val gZ = z / SensorManager.GRAVITY_EARTH
+
+                val gForce = kotlin.math.sqrt(gX * gX + gY * gY + gZ * gZ)
+
+                if (gForce > 1.45f) { // Shake detected
+                    val now = System.currentTimeMillis()
+                    if (now - lastShakeTime > 2000) {
+                        lastShakeTime = now
+                        try {
+                            playerConnection.player.shuffleModeEnabled = !playerConnection.player.shuffleModeEnabled
+                            showShuffleHud = true
+                        } catch (_: Exception) {}
+                    }
+                }
+            }
+
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+        }
+
+        sensorManager.registerListener(listener, accelerometer, SensorManager.SENSOR_DELAY_UI)
+        try {
+            while (isActive) {
+                delay(1000)
+            }
+        } finally {
+            sensorManager.unregisterListener(listener)
+        }
+    }
+
+    LaunchedEffect(showShuffleHud) {
+        if (showShuffleHud) {
+            delay(1600)
+            showShuffleHud = false
         }
     }
 
@@ -598,6 +677,7 @@ fun BottomSheetPlayer(
                 context = context,
                 onSliderValueChange = onSliderValueChange,
                 onSliderValueChangeFinished = onSliderValueChangeFinished,
+                onShowSleepTimer = { showSleepTimerDialog = true }
             )
         }
 
@@ -743,7 +823,27 @@ fun BottomSheetPlayer(
                         }
 
                         enrichedMetadata?.let {
-                            controlsContent(it)
+                            val isDark = isSystemInDarkTheme()
+                            val glassFillColor = if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f)
+                            val glassBorderColor = if (isDark) Color.White.copy(alpha = 0.15f) else Color.Black.copy(alpha = 0.1f)
+                            
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    .background(
+                                        color = glassFillColor,
+                                        shape = RoundedCornerShape(24.dp)
+                                    )
+                                    .border(
+                                        width = 1.dp,
+                                        color = glassBorderColor,
+                                        shape = RoundedCornerShape(24.dp)
+                                    )
+                                    .padding(vertical = 20.dp, horizontal = 8.dp)
+                            ) {
+                                controlsContent(it)
+                            }
                         }
 
                         Spacer(Modifier.height(30.dp))
@@ -805,6 +905,113 @@ fun BottomSheetPlayer(
                         onBackClick = { lyricsSheetState.collapseSoft() },
                         navController = navController
                     )
+                }
+            }
+        }
+
+        if (showShuffleHud) {
+            val shuffleEnabled = playerConnection.player.shuffleModeEnabled
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.3f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(190.dp)
+                        .background(
+                            color = Color.White.copy(alpha = 0.08f),
+                            shape = RoundedCornerShape(28.dp)
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = Color.White.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(28.dp)
+                        )
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        val hudTransition = rememberInfiniteTransition(label = "hud_gooey")
+                        val hudAngle by hudTransition.animateFloat(
+                            initialValue = 0f,
+                            targetValue = 2f * kotlin.math.PI.toFloat(),
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(1500, easing = LinearEasing),
+                                repeatMode = RepeatMode.Restart
+                            ),
+                            label = "hud_angle"
+                        )
+
+                        val hudGooeyEffect = remember {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                val blurEffect = RenderEffect.createBlurEffect(15f, 15f, Shader.TileMode.DECAL)
+                                val alphaContrastMatrix = android.graphics.ColorMatrix(floatArrayOf(
+                                    1f, 0f, 0f, 0f, 0f,
+                                    0f, 1f, 0f, 0f, 0f,
+                                    0f, 0f, 1f, 0f, 0f,
+                                    0f, 0f, 0f, 40f, -2000f
+                                ))
+                                val colorFilterEffect = RenderEffect.createColorFilterEffect(ColorMatrixColorFilter(alphaContrastMatrix))
+                                RenderEffect.createChainEffect(colorFilterEffect, blurEffect).asComposeRenderEffect()
+                            } else {
+                                null
+                            }
+                        }
+
+                        Canvas(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .graphicsLayer {
+                                    if (hudGooeyEffect != null) {
+                                        this.renderEffect = hudGooeyEffect
+                                    }
+                                }
+                        ) {
+                            val cw = size.width
+                            val ch = size.height
+                            val cCenter = Offset(cw / 2f, ch / 2f)
+
+                            drawCircle(
+                                color = Color.White,
+                                radius = cw * 0.2f,
+                                center = cCenter
+                            )
+
+                            val orbitDist = cw * 0.24f * (1.1f + 0.1f * kotlin.math.sin(hudAngle * 2f))
+                            val orbitOffset = Offset(
+                                x = cCenter.x + orbitDist * kotlin.math.cos(hudAngle),
+                                y = cCenter.y + orbitDist * kotlin.math.sin(hudAngle)
+                            )
+                            drawCircle(
+                                color = Color.White,
+                                radius = cw * 0.16f,
+                                center = orbitOffset
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Icon(
+                            painter = painterResource(R.drawable.shuffle),
+                            contentDescription = null,
+                            tint = if (shuffleEnabled) MaterialTheme.colorScheme.primary else Color.White,
+                            modifier = Modifier.size(26.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = if (shuffleEnabled) "Shuffle On" else "Shuffle Off",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390px, initial-scale=1.0">
+<title>AuraMusic - Library</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{--bg:#0D0D0D;--surface:#141414;--border:#2A2A2A;--red:#E8002D;--white:#FFFFFF;--gray:#A0A0A0}
+  body{background:var(--bg);color:var(--white);font-family:'Sora',sans-serif;width:390px;min-height:844px}
+  
+  .header{display:flex;align-items:center;justify-content:space-between;padding:52px 24px 16px}
+  .page-title{font-family:'Sora';font-size:26px;font-weight:800;color:var(--white)}
+  .add-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);border-radius:50%;cursor:pointer}
+  .add-btn svg{width:20px;height:20px;color:var(--white)}
+
+  .tab-row{display:flex;gap:8px;padding:0 24px 16px;overflow-x:auto;scrollbar-width:none}
+  .tab-row::-webkit-scrollbar{display:none}
+  .tab{flex-shrink:0;padding:8px 16px;border-radius:99px;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.06em;cursor:pointer;border:1px solid var(--border);color:var(--gray);background:transparent}
+  .tab.active{background:var(--red);border-color:var(--red);color:var(--white)}
+
+  .sort-row{display:flex;align-items:center;justify-content:space-between;padding:0 24px 12px}
+  .sort-label{font-family:'Space Mono',monospace;font-size:10px;color:var(--gray);letter-spacing:0.06em}
+  .sort-btn{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer}
+  .sort-btn span{font-family:'Space Mono',monospace;font-size:9px;color:var(--gray);letter-spacing:0.06em;text-transform:uppercase}
+  .sort-btn svg{width:14px;height:14px;color:var(--gray)}
+
+  /* Playlist list */
+  .list{padding:0 24px;display:flex;flex-direction:column;gap:0}
+  .list-item{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid rgba(42,42,42,0.4);cursor:pointer}
+  .list-item:last-child{border-bottom:none}
+  .item-art{width:56px;height:56px;border-radius:10px;flex-shrink:0;position:relative;overflow:hidden}
+  .item-art-inner{position:absolute;inset:0}
+  .ia1{background:linear-gradient(135deg,#1a0005,#2d000a)}
+  .ia2{background:linear-gradient(135deg,#05001a,#100030)}
+  .ia3{background:linear-gradient(135deg,#001a10,#003020)}
+  .ia4{background:linear-gradient(135deg,#1a1500,#2d2000)}
+  .ia5{background:linear-gradient(135deg,#1a0010,#0f000a)}
+  .ia6{background:linear-gradient(135deg,#001520,#000a15)}
+  .item-info{flex:1}
+  .item-name{font-family:'Sora';font-size:15px;font-weight:600;color:var(--white)}
+  .item-meta{font-family:'Inter';font-size:12px;color:var(--gray);margin-top:3px}
+  .item-type{font-family:'Space Mono',monospace;font-size:9px;color:var(--red);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px}
+  .item-right{display:flex;align-items:center}
+  .item-right svg{width:18px;height:18px;color:var(--gray)}
+
+  /* Downloaded section */
+  .download-banner{margin:16px 24px 0;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:14px}
+  .download-icon{width:40px;height:40px;background:rgba(232,0,45,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .download-icon svg{width:20px;height:20px;color:var(--red)}
+  .download-info{flex:1}
+  .download-title{font-family:'Sora';font-size:14px;font-weight:600;color:var(--white)}
+  .download-sub{font-family:'Inter';font-size:12px;color:var(--gray);margin-top:2px}
+  .download-toggle{width:44px;height:24px;background:var(--red);border-radius:99px;position:relative;cursor:pointer}
+  .toggle-thumb{position:absolute;right:2px;top:2px;width:20px;height:20px;background:var(--white);border-radius:50%}
+
+  .section-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px 12px}
+  .section-title{font-family:'Sora';font-size:16px;font-weight:700;color:var(--white)}
+  .see-all{font-family:'Inter';font-size:13px;color:var(--red);cursor:pointer}
+
+  /* Bottom nav */
+  .bottom-nav{margin:20px 24px 16px;background:var(--surface);border:1px solid var(--border);border-radius:28px;padding:12px 8px;display:flex;align-items:center;justify-content:space-around}
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:4px 12px;border-radius:20px}
+  .nav-item.active{background:rgba(232,0,45,0.1)}
+  .nav-item svg{width:22px;height:22px;color:var(--gray)}
+  .nav-item.active svg{color:var(--red)}
+  .nav-label{font-family:'Space Mono',monospace;font-size:9px;color:var(--gray)}
+  .nav-item.active .nav-label{color:var(--red)}
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="page-title">Your Library</div>
+    <div class="add-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </div>
+  </div>
+
+  <div class="tab-row">
+    <div class="tab active">Playlists</div>
+    <div class="tab">Albums</div>
+    <div class="tab">Artists</div>
+    <div class="tab">Podcasts</div>
+    <div class="tab">Downloaded</div>
+  </div>
+
+  <div class="sort-row">
+    <span class="sort-label">6 PLAYLISTS</span>
+    <div class="sort-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      <span>Recent</span>
+    </div>
+  </div>
+
+  <div class="list">
+    <div class="list-item">
+      <div class="item-art"><div class="item-art-inner ia1"></div></div>
+      <div class="item-info">
+        <div class="item-name">Liked Songs</div>
+        <div class="item-meta">247 songs</div>
+        <div class="item-type">Playlist</div>
+      </div>
+      <div class="item-right"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></div>
+    </div>
+    <div class="list-item">
+      <div class="item-art"><div class="item-art-inner ia2"></div></div>
+      <div class="item-info">
+        <div class="item-name">Late Night Vibes</div>
+        <div class="item-meta">32 songs</div>
+        <div class="item-type">Playlist</div>
+      </div>
+      <div class="item-right"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></div>
+    </div>
+    <div class="list-item">
+      <div class="item-art"><div class="item-art-inner ia3"></div></div>
+      <div class="item-info">
+        <div class="item-name">Workout Mode 🔥</div>
+        <div class="item-meta">18 songs</div>
+        <div class="item-type">Playlist</div>
+      </div>
+      <div class="item-right"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></div>
+    </div>
+    <div class="list-item">
+      <div class="item-art"><div class="item-art-inner ia4"></div></div>
+      <div class="item-info">
+        <div class="item-name">After Hours</div>
+        <div class="item-meta">The Weeknd • Album</div>
+        <div class="item-type">Album</div>
+      </div>
+      <div class="item-right"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></div>
+    </div>
+    <div class="list-item">
+      <div class="item-art"><div class="item-art-inner ia5"></div></div>
+      <div class="item-info">
+        <div class="item-name">Focus Flow</div>
+        <div class="item-meta">42 songs</div>
+        <div class="item-type">Playlist</div>
+      </div>
+      <div class="item-right"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></div>
+    </div>
+    <div class="list-item">
+      <div class="item-art"><div class="item-art-inner ia6"></div></div>
+      <div class="item-info">
+        <div class="item-name">Midnight Collection</div>
+        <div class="item-meta">56 songs</div>
+        <div class="item-type">Playlist</div>
+      </div>
+      <div class="item-right"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></div>
+    </div>
+  </div>
+
+  <div class="download-banner">
+    <div class="download-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    </div>
+    <div class="download-info">
+      <div class="download-title">Offline Mode</div>
+      <div class="download-sub">84 songs downloaded</div>
+    </div>
+    <div class="download-toggle"><div class="toggle-thumb"></div></div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span class="nav-label">Home</span>
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span class="nav-label">Search</span>
+    </div>
+    <div class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      <span class="nav-label">Library</span>
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span class="nav-label">Profile</span>
+    </div>
+  </div>
+
+</body>
+</html>

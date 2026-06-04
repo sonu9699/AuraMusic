@@ -11,6 +11,19 @@ package com.aura.music.ui.player
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.isSystemInDarkTheme
+import android.os.Build
+import android.graphics.RenderEffect
+import android.graphics.Shader
+import android.graphics.ColorMatrixColorFilter
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.graphicsLayer
+import com.aura.music.extensions.togglePlayPause
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -300,6 +313,7 @@ fun Thumbnail(
         PlayerBackgroundStyle.GLOW -> Color.White
         PlayerBackgroundStyle.GLOW_ANIMATED -> Color.White
         PlayerBackgroundStyle.CUSTOM -> Color.White
+        PlayerBackgroundStyle.LIQUID_GOOEY -> Color.White
     }
 
     LaunchedEffect(maxCanvasCacheSize) {
@@ -483,6 +497,10 @@ fun Thumbnail(
                             val incrementalSeekSkipEnabled by rememberPreference(SeekExtraSeconds, defaultValue = false)
                             var skipMultiplier by remember { mutableStateOf(1) }
                             var lastTapTime by remember { mutableLongStateOf(0L) }
+                            
+                            val rippleProgress = remember { Animatable(0f) }
+                            var rippleOffset by remember { mutableStateOf(Offset.Zero) }
+                            var showRipple by remember { mutableStateOf(false) }
                             val itemMetadata = remember(item) { item.metadata }
                             val storefront =
                                 remember {
@@ -609,11 +627,30 @@ fun Thumbnail(
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(containerMaxWidth - (PlayerHorizontalPadding * 2))
-                                                .clip(RoundedCornerShape(thumbnailCornerRadius.dp))
-                                            ) {
+                                         Box(
+                                             modifier = Modifier
+                                                 .size(containerMaxWidth - (PlayerHorizontalPadding * 2))
+                                                 .clip(RoundedCornerShape(thumbnailCornerRadius.dp))
+                                                 .pointerInput(Unit) {
+                                                     detectTapGestures(
+                                                         onDoubleTap = { offset ->
+                                                             try {
+                                                                 playerConnection.player.togglePlayPause()
+                                                                 rippleOffset = offset
+                                                                 showRipple = true
+                                                                 coroutineScope.launch {
+                                                                     rippleProgress.snapTo(0f)
+                                                                     rippleProgress.animateTo(
+                                                                         targetValue = 1f,
+                                                                         animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
+                                                                     )
+                                                                     showRipple = false
+                                                                 }
+                                                             } catch (_: Exception) {}
+                                                         }
+                                                     )
+                                                 }
+                                             ) {
                                     if (hidePlayerThumbnail) {
                                         // Show app logo when thumbnail is hidden
                                         Box(
@@ -664,7 +701,71 @@ fun Thumbnail(
                                             )
                                         }
                                     }
-                                }
+
+                                         if (showRipple || (rippleProgress.value > 0f && rippleProgress.value < 1f)) {
+                                             val progress = rippleProgress.value
+                                             val isDark = isSystemInDarkTheme()
+                                             val rippleColor = if (isDark) Color.White.copy(alpha = 0.28f) else Color.Black.copy(alpha = 0.22f)
+
+                                             val composeRenderEffect = remember {
+                                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                                     val blurEffect = RenderEffect.createBlurEffect(30f, 30f, Shader.TileMode.DECAL)
+                                                     val alphaContrastMatrix = android.graphics.ColorMatrix(floatArrayOf(
+                                                         1f, 0f, 0f, 0f, 0f,
+                                                         0f, 1f, 0f, 0f, 0f,
+                                                         0f, 0f, 1f, 0f, 0f,
+                                                         0f, 0f, 0f, 60f, -3000f
+                                                     ))
+                                                     val colorFilterEffect = RenderEffect.createColorFilterEffect(ColorMatrixColorFilter(alphaContrastMatrix))
+                                                     RenderEffect.createChainEffect(colorFilterEffect, blurEffect).asComposeRenderEffect()
+                                                 } else {
+                                                     null
+                                                 }
+                                             }
+
+                                             Canvas(
+                                                 modifier = Modifier
+                                                     .fillMaxSize()
+                                                     .graphicsLayer {
+                                                         if (composeRenderEffect != null) {
+                                                             this.renderEffect = composeRenderEffect
+                                                         }
+                                                     }
+                                             ) {
+                                                 val drawScope = this
+                                                 val maxRadius = drawScope.size.width * 1.3f
+                                                 val currentRadius = maxRadius * progress
+
+                                                 // Main expanding ripple circle
+                                                 drawScope.drawCircle(
+                                                     color = rippleColor,
+                                                     radius = currentRadius,
+                                                     center = rippleOffset
+                                                 )
+
+                                                 // 3 dynamic satellite droplets that bubble out and merge back
+                                                 if (progress > 0.05f && progress < 0.8f) {
+                                                     val angleStep = (2 * kotlin.math.PI / 3).toFloat()
+                                                     for (i in 0 until 3) {
+                                                         val angle = i * angleStep + progress * 2.5f
+                                                         val dist = currentRadius + drawScope.run { 25.dp.toPx() } * (1f - progress)
+                                                         val satOffset = Offset(
+                                                             x = rippleOffset.x + dist * kotlin.math.cos(angle),
+                                                             y = rippleOffset.y + dist * kotlin.math.sin(angle)
+                                                         )
+                                                         val satRadius = drawScope.run { 22.dp.toPx() } * (0.8f - progress)
+                                                         if (satRadius > 0) {
+                                                             drawScope.drawCircle(
+                                                                 color = rippleColor,
+                                                                 radius = satRadius,
+                                                                 center = satOffset
+                                                             )
+                                                         }
+                                                     }
+                                                 }
+                                             }
+                                         }
+                                     }
                             }
                         }
                     }

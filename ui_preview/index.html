@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AuraMusic Design Systems Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#050508; font-family:'Outfit',sans-serif; color:#fff; min-height:100vh; overflow-x:hidden; position:relative; }
+
+  /* Background Glow for landing hub */
+  body::before {
+    content:'';
+    position:absolute;
+    top:0;
+    left:20%;
+    width:600px;
+    height:600px;
+    background:radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, transparent 70%);
+    pointer-events:none;
+    z-index:0;
+  }
+
+  .header { padding:32px 48px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #14141A; position:relative; z-index:1; }
+  .logo { display:flex; align-items:center; gap:8px; }
+  .logo-text { font-size:24px; font-weight:800; letter-spacing:-0.03em; }
+  .logo-dot { width:8px; height:8px; background:#D2F535; border-radius:50%; transition: background 0.3s; }
+  .subtitle { font-family:'JetBrains Mono',monospace; font-size:11px; color:#666; letter-spacing:0.12em; text-transform:uppercase; margin-left:8px; }
+
+  /* Tab Toggles */
+  .theme-toggle-container { display:flex; background:#0d0d12; border:1px solid #1a1a24; border-radius:30px; padding:4px; }
+  .theme-btn { padding:10px 24px; border-radius:26px; border:none; cursor:pointer; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; background:transparent; color:#666; transition:all 0.3s ease; }
+  .theme-btn.active { background:#D2F535; color:#000000; box-shadow:0 4px 20px rgba(210,245,53,0.25); }
+
+  .screens-container { display:flex; padding:48px; flex-wrap:wrap; justify-content:center; gap:40px; position:relative; z-index:1; }
+
+  .screen-wrapper { display:flex; flex-direction:column; align-items:center; gap:16px; }
+  .screen-label { font-family:'JetBrains Mono',monospace; font-size:11px; color:#888; letter-spacing:0.12em; text-transform:uppercase; }
+
+  .phone-frame { width:390px; height:844px; background:#000000; border-radius:44px; overflow:hidden; border:2px solid #2A2A2A; position:relative; box-shadow: 0 32px 80px rgba(0,0,0,0.9), 0 0 0 1px #111116, inset 0 1px 0 rgba(255,255,255,0.03); transition: border-color 0.3s; }
+  .phone-frame iframe { width:100%; height:100%; border:none; }
+
+  /* Dynamic island */
+  .phone-frame::before { content:''; position:absolute; top:12px; left:50%; transform:translateX(-50%); width:120px; height:34px; background:#000; border-radius:20px; z-index:100; border:1px solid #111; }
+
+  /* Custom badge info */
+  .design-system-badge { display:inline-flex; align-items:center; gap:8px; padding:6px 16px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:99px; }
+  .design-system-badge span { font-family:'JetBrains Mono',monospace; font-size:10px; color:#ffffff; letter-spacing:0.08em; text-transform:uppercase; }
+  .badge-dot { width:6px; height:6px; background:#D2F535; border-radius:50%; animation:pulse 1.8s ease-in-out infinite; transition: background 0.3s; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <span class="logo-text">AuraMusic</span>
+    <div class="logo-dot" id="logo-dot"></div>
+    <span class="subtitle" id="edition-subtitle">Volt Neon Edition</span>
+  </div>
+
+  <div class="theme-toggle-container">
+    <button class="theme-btn active" onclick="switchTheme('volt', this)">Volt Neon Edition</button>
+    <button class="theme-btn" onclick="switchTheme('crimson', this)">Crimson Red</button>
+  </div>
+
+  <div class="design-system-badge">
+    <div class="badge-dot" id="badge-dot"></div>
+    <span id="badge-text">Volt & Lavender</span>
+  </div>
+</div>
+
+<div class="screens-container">
+
+  <div class="screen-wrapper">
+    <span class="screen-label">01 — Home</span>
+    <div class="phone-frame" id="frame-1">
+      <iframe id="iframe-home" src="bw_home.html" scrolling="auto"></iframe>
+    </div>
+  </div>
+
+  <div class="screen-wrapper">
+    <span class="screen-label">02 — Now Playing</span>
+    <div class="phone-frame" id="frame-2">
+      <iframe id="iframe-now" src="bw_now_playing.html" scrolling="auto"></iframe>
+    </div>
+  </div>
+
+  <div class="screen-wrapper">
+    <span class="screen-label">03 — Search</span>
+    <div class="phone-frame" id="frame-3">
+      <iframe id="iframe-search" src="bw_search.html" scrolling="auto"></iframe>
+    </div>
+  </div>
+
+  <div class="screen-wrapper">
+    <span class="screen-label">04 — Library</span>
+    <div class="phone-frame" id="frame-4">
+      <iframe id="iframe-library" src="bw_library.html" scrolling="auto"></iframe>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function switchTheme(themeName, btnElement) {
+    // Update active button state
+    const buttons = document.querySelectorAll('.theme-btn');
+    buttons.forEach(btn => btn.classList.remove('active'));
+    btnElement.classList.add('active');
+
+    // Get elements to change
+    const subtitle = document.getElementById('edition-subtitle');
+    const badgeText = document.getElementById('badge-text');
+    const logoDot = document.getElementById('logo-dot');
+    const badgeDot = document.getElementById('badge-dot');
+    
+    const iframeHome = document.getElementById('iframe-home');
+    const iframeNow = document.getElementById('iframe-now');
+    const iframeSearch = document.getElementById('iframe-search');
+    const iframeLibrary = document.getElementById('iframe-library');
+
+    const frames = [
+      document.getElementById('frame-1'),
+      document.getElementById('frame-2'),
+      document.getElementById('frame-3'),
+      document.getElementById('frame-4')
+    ];
+
+    if (themeName === 'volt') {
+      // Set Volt Neon assets
+      iframeHome.src = 'bw_home.html';
+      iframeNow.src = 'bw_now_playing.html';
+      iframeSearch.src = 'bw_search.html';
+      iframeLibrary.src = 'bw_library.html';
+
+      subtitle.innerText = 'Volt Neon Edition';
+      badgeText.innerText = 'Volt & Lavender';
+      logoDot.style.background = '#D2F535';
+      badgeDot.style.background = '#D2F535';
+      
+      btnElement.style.background = '#D2F535';
+      btnElement.style.color = '#000000';
+      
+      const crimsonBtn = buttons[1];
+      crimsonBtn.style.background = 'transparent';
+      crimsonBtn.style.color = '#666';
+
+      frames.forEach(frame => {
+        frame.style.borderColor = '#2A2A2A';
+      });
+    } else {
+      // Set Crimson assets
+      iframeHome.src = 'home.html';
+      iframeNow.src = 'now_playing.html';
+      iframeSearch.src = 'search.html';
+      iframeLibrary.src = 'library.html';
+
+      subtitle.innerText = 'Crimson Edition';
+      badgeText.innerText = 'Vivid Crimson';
+      logoDot.style.background = '#E8002D';
+      badgeDot.style.background = '#E8002D';
+
+      btnElement.style.background = '#E8002D';
+      btnElement.style.color = '#ffffff';
+
+      const voltBtn = buttons[0];
+      voltBtn.style.background = 'transparent';
+      voltBtn.style.color = '#666';
+
+      frames.forEach(frame => {
+        frame.style.borderColor = '#4A151B';
+      });
+    }
+  }
+</script>
+
+</body>
+</html>

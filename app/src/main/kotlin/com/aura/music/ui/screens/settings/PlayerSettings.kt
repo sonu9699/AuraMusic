@@ -60,6 +60,7 @@ import com.aura.music.constants.AudioCrossfadeDurationKey
 import com.aura.music.constants.PlayerStreamClient
 import com.aura.music.constants.PlayerStreamClientKey
 import com.aura.music.constants.SeekExtraSeconds
+import com.aura.music.constants.ShakeToShuffleKey
 import com.aura.music.ui.component.ArtistSeparatorsDialog
 import com.aura.music.ui.component.TagsManagementDialog
 import com.aura.music.ui.component.EnumListPreference
@@ -117,6 +118,10 @@ fun PlayerSettings(
     val (seekExtraSeconds, onSeekExtraSeconds) = rememberPreference(
         SeekExtraSeconds,
         defaultValue = false
+    )
+    val (shakeToShuffle, onShakeToShuffleChange) = rememberPreference(
+        ShakeToShuffleKey,
+        defaultValue = true
     )
 
     val (autoDownloadOnLike, onAutoDownloadOnLikeChange) = rememberPreference(
@@ -348,6 +353,14 @@ fun PlayerSettings(
             icon = { Icon(painterResource(R.drawable.bluetooth), null) },
             checked = autoStartOnBluetooth,
             onCheckedChange = onAutoStartOnBluetoothChange
+        )
+
+        SwitchPreference(
+            title = { Text("Shake to Shuffle") },
+            description = "Shake the device to shuffle playback queue",
+            icon = { Icon(painterResource(R.drawable.shuffle), null) },
+            checked = shakeToShuffle,
+            onCheckedChange = onShakeToShuffleChange
         )
 
         PreferenceGroupTitle(

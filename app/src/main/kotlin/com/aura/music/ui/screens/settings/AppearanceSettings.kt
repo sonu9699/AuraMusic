@@ -443,6 +443,7 @@ fun AppearanceSettings(
                     PlayerBackgroundStyle.BLUR_GRADIENT -> stringResource(R.string.blur_gradient)
                     PlayerBackgroundStyle.GLOW -> stringResource(R.string.glow)
                     PlayerBackgroundStyle.GLOW_ANIMATED -> "Glow Animated"
+                    PlayerBackgroundStyle.LIQUID_GOOEY -> "Liquid Gooey (Stitch)"
                 }
             },
         )

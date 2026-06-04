@@ -9,6 +9,14 @@
 package com.aura.music.ui.player
 
 import com.aura.music.ui.component.AuraMusicLoader
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.RenderEffect
+import android.graphics.Shader
+import android.os.Build
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.graphicsLayer
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -28,6 +36,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -55,9 +64,12 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -249,8 +261,27 @@ fun PlayerTopActions(
     state: BottomSheetState,
     bottomSheetPageState: BottomSheetPageState,
     context: Context,
-    currentSongLiked: Boolean
+    currentSongLiked: Boolean,
+    onShowSleepTimer: () -> Unit
 ) {
+    val sleepTimer = playerConnection.service.sleepTimer
+    val sleepTimerEnabled = remember(sleepTimer.triggerTime, sleepTimer.pauseWhenSongEnd) {
+        sleepTimer.isActive
+    }
+    var sleepTimerTimeLeft by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(sleepTimerEnabled) {
+        if (sleepTimerEnabled) {
+            while (true) {
+                sleepTimerTimeLeft = if (sleepTimer.pauseWhenSongEnd) {
+                    playerConnection.player.duration - playerConnection.player.currentPosition
+                } else {
+                    sleepTimer.triggerTime - System.currentTimeMillis()
+                }
+                delay(1000L)
+            }
+        }
+    }
+
     when (playerDesignStyle) {
         PlayerDesignStyle.V2 -> {
             val shareShape = RoundedCornerShape(
@@ -316,6 +347,52 @@ fun PlayerTopActions(
                             .size(24.dp)
                     )
                 }
+
+                if (sleepTimerEnabled) {
+                    Box(
+                        modifier = Modifier
+                            .height(42.dp)
+                            .clip(RoundedCornerShape(21.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(21.dp))
+                            .clickable { onShowSleepTimer() }
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.bedtime),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = com.aura.music.utils.makeTimeString(sleepTimerTimeLeft.coerceAtLeast(0L)),
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(textButtonColor)
+                            .clickable { onShowSleepTimer() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.bedtime),
+                            contentDescription = null,
+                            colorFilter = ColorFilter.tint(iconButtonColor),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
             }
         }
 
@@ -367,6 +444,51 @@ fun PlayerTopActions(
                         else textBackgroundColor.copy(alpha = 0.7f),
                         modifier = Modifier.size(20.dp)
                     )
+                }
+
+                if (sleepTimerEnabled) {
+                    Box(
+                        modifier = Modifier
+                            .height(36.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(18.dp))
+                            .clickable { onShowSleepTimer() }
+                            .padding(horizontal = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.bedtime),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = com.aura.music.utils.makeTimeString(sleepTimerTimeLeft.coerceAtLeast(0L)),
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onShowSleepTimer() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.bedtime),
+                            contentDescription = null,
+                            tint = textBackgroundColor.copy(alpha = 0.7f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }
@@ -426,6 +548,48 @@ fun PlayerTopActions(
                             else textBackgroundColor,
                             modifier = Modifier.size(22.dp)
                         )
+                    }
+                }
+
+                Surface(
+                    onClick = onShowSleepTimer,
+                    shape = RoundedCornerShape(14.dp),
+                    color = if (sleepTimerEnabled)
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+                    else textBackgroundColor.copy(alpha = 0.12f),
+                    modifier = if (sleepTimerEnabled) {
+                        Modifier.height(44.dp).padding(horizontal = 4.dp)
+                    } else {
+                        Modifier.height(44.dp).width(44.dp)
+                    }
+                ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        if (sleepTimerEnabled) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.bedtime),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = com.aura.music.utils.makeTimeString(sleepTimerTimeLeft.coerceAtLeast(0L)),
+                                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        } else {
+                            Icon(
+                                painter = painterResource(R.drawable.bedtime),
+                                contentDescription = null,
+                                tint = textBackgroundColor,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                     }
                 }
 
@@ -494,6 +658,54 @@ fun PlayerTopActions(
                         .align(Alignment.Center)
                         .size(24.dp),
                 )
+            }
+
+            Spacer(modifier = Modifier.size(12.dp))
+
+            if (sleepTimerEnabled) {
+                Box(
+                    modifier = Modifier
+                        .height(40.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
+                        .clickable { onShowSleepTimer() }
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.bedtime),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = com.aura.music.utils.makeTimeString(sleepTimerTimeLeft.coerceAtLeast(0L)),
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(textButtonColor)
+                        .clickable { onShowSleepTimer() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.bedtime),
+                        contentDescription = null,
+                        colorFilter = ColorFilter.tint(iconButtonColor),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.size(12.dp))
@@ -827,6 +1039,12 @@ fun PlayerPlaybackControls(
                         modifier = Modifier
                             .size(40.dp)
                             .clip(RoundedCornerShape(10.dp))
+                            .let {
+                                if (shuffleModeEnabled) {
+                                    it.background(textBackgroundColor.copy(alpha = 0.12f))
+                                      .border(1.dp, textBackgroundColor.copy(alpha = 0.25f), RoundedCornerShape(10.dp))
+                                } else it
+                            }
                             .semantics {
                                 role = Role.Button
                                 contentDescription = "Shuffle"
@@ -850,8 +1068,9 @@ fun PlayerPlaybackControls(
                     Box(
                         modifier = Modifier
                             .size(52.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(textBackgroundColor.copy(alpha = 0.08f))
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(textBackgroundColor.copy(alpha = 0.05f))
+                            .border(1.dp, textBackgroundColor.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
                             .clickable(enabled = canSkipPrevious) {
                                 playerConnection.seekToPrevious()
                             },
@@ -867,9 +1086,10 @@ fun PlayerPlaybackControls(
 
                     Box(
                         modifier = Modifier
-                            .size(70.dp)
+                            .size(72.dp)
                             .clip(RoundedCornerShape(50))
                             .background(textBackgroundColor)
+                            .border(2.dp, textBackgroundColor.copy(alpha = 0.2f), RoundedCornerShape(50))
                             .clickable {
                                 if (playbackState == STATE_ENDED) {
                                     playerConnection.player.seekTo(0, 0)
@@ -881,7 +1101,7 @@ fun PlayerPlaybackControls(
                         contentAlignment = Alignment.Center
                     ) {
                         if (isLoading) {
-                            AuraMusicLoader(size = 32.dp)
+                            AuraMusicLoader(size = 32.dp, color = icBackgroundColor)
                         } else {
                             Icon(
                                 painter = painterResource(
@@ -905,8 +1125,9 @@ fun PlayerPlaybackControls(
                     Box(
                         modifier = Modifier
                             .size(52.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(textBackgroundColor.copy(alpha = 0.08f))
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(textBackgroundColor.copy(alpha = 0.05f))
+                            .border(1.dp, textBackgroundColor.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
                             .clickable(enabled = canSkipNext) {
                                 playerConnection.seekToNext()
                             },
@@ -924,6 +1145,12 @@ fun PlayerPlaybackControls(
                         modifier = Modifier
                             .size(40.dp)
                             .clip(RoundedCornerShape(10.dp))
+                            .let {
+                                if (repeatMode != Player.REPEAT_MODE_OFF) {
+                                    it.background(textBackgroundColor.copy(alpha = 0.12f))
+                                      .border(1.dp, textBackgroundColor.copy(alpha = 0.25f), RoundedCornerShape(10.dp))
+                                } else it
+                            }
                             .semantics {
                                 role = Role.Button
                                 contentDescription = "Repeat"
@@ -1323,7 +1550,8 @@ fun PlayerControlsContent(
     clipboardManager: ClipboardManager,
     context: Context,
     onSliderValueChange: (Long) -> Unit,
-    onSliderValueChangeFinished: () -> Unit
+    onSliderValueChangeFinished: () -> Unit,
+    onShowSleepTimer: () -> Unit
 ) {
     val currentSong by playerConnection.currentSong.collectAsState(initial = null)
     val currentSongLiked = currentSong?.song?.liked == true
@@ -1366,7 +1594,8 @@ fun PlayerControlsContent(
             state = state,
             bottomSheetPageState = bottomSheetPageState,
             context = context,
-            currentSongLiked = currentSongLiked
+            currentSongLiked = currentSongLiked,
+            onShowSleepTimer = onShowSleepTimer
         )
     }
 
@@ -1829,6 +2058,120 @@ fun PlayerBackground(
                                 }
                         )
                     }
+                }
+            }
+
+            PlayerBackgroundStyle.LIQUID_GOOEY -> {
+                val isDark = isSystemInDarkTheme()
+                val baseColor = if (isDark) Color(0xFF030303) else Color(0xFFFAFAFA)
+                val connection = LocalPlayerConnection.current
+                val isPlaying = connection?.isPlaying?.collectAsState()?.value == true
+
+                var time by remember { mutableStateOf(0f) }
+                LaunchedEffect(isPlaying) {
+                    var lastTime = System.currentTimeMillis()
+                    while (true) {
+                        val now = System.currentTimeMillis()
+                        val delta = (now - lastTime) / 1000f
+                        lastTime = now
+                        time += delta * (if (isPlaying) 0.6f else 0.1f)
+                        delay(16)
+                    }
+                }
+
+                val composeRenderEffect = remember {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        val blurEffect = RenderEffect.createBlurEffect(50f, 50f, Shader.TileMode.DECAL)
+                        val alphaContrastMatrix = android.graphics.ColorMatrix(floatArrayOf(
+                            1f, 0f, 0f, 0f, 0f,
+                            0f, 1f, 0f, 0f, 0f,
+                            0f, 0f, 1f, 0f, 0f,
+                            0f, 0f, 0f, 85f, -4250f
+                        ))
+                        val colorFilterEffect = RenderEffect.createColorFilterEffect(ColorMatrixColorFilter(alphaContrastMatrix))
+                        RenderEffect.createChainEffect(colorFilterEffect, blurEffect).asComposeRenderEffect()
+                    } else {
+                        null
+                    }
+                }
+
+                val colors = if (gradientColors.isNotEmpty()) {
+                    gradientColors
+                } else {
+                    listOf(
+                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.secondary,
+                        MaterialTheme.colorScheme.tertiary
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(baseColor)
+                ) {
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                if (composeRenderEffect != null) {
+                                    this.renderEffect = composeRenderEffect
+                                }
+                            }
+                    ) {
+                        val w = size.width
+                        val h = size.height
+                        val center = Offset(w / 2f, h / 2f)
+
+                        // 4 Metaballs rotating and stretching organically
+                        val c1 = colors.getOrElse(0) { Color.Magenta }
+                        val c2 = colors.getOrElse(1) { Color.Cyan }
+                        val c3 = colors.getOrElse(2) { Color.Yellow }
+                        val c4 = colors.getOrElse(3 % colors.size) { c1 }
+
+                        // Ball 1
+                        val o1 = Offset(
+                            x = center.x + w * 0.22f * kotlin.math.sin(time * 0.6f),
+                            y = center.y + h * 0.18f * kotlin.math.cos(time * 0.5f)
+                        )
+                        drawCircle(color = c1, radius = w * 0.25f, center = o1)
+
+                        // Ball 2
+                        val o2 = Offset(
+                            x = center.x - w * 0.25f * kotlin.math.cos(time * 0.7f + 1.5f),
+                            y = center.y + h * 0.15f * kotlin.math.sin(time * 0.4f + 2.0f)
+                        )
+                        drawCircle(color = c2, radius = w * 0.21f, center = o2)
+
+                        // Ball 3
+                        val o3 = Offset(
+                            x = center.x + w * 0.2f * kotlin.math.cos(time * 0.5f + 3.0f),
+                            y = center.y - h * 0.2f * kotlin.math.sin(time * 0.8f + 1.0f)
+                        )
+                        drawCircle(color = c3, radius = w * 0.23f, center = o3)
+
+                        // Ball 4
+                        val o4 = Offset(
+                            x = center.x - w * 0.18f * kotlin.math.sin(time * 0.8f + 4.5f),
+                            y = center.y - h * 0.16f * kotlin.math.cos(time * 0.6f + 0.5f)
+                        )
+                        drawCircle(color = c4, radius = w * 0.2f, center = o4)
+                    }
+
+                    // A gentle translucent glass-like overlay for text readability
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = if (isDark) {
+                                        listOf(Color.Black.copy(alpha = 0.4f), Color.Black.copy(alpha = 0.7f))
+                                    } else {
+                                        listOf(Color.White.copy(alpha = 0.3f), Color.White.copy(alpha = 0.6f))
+                                    }
+                                )
+                            )
+                    )
                 }
             }
 

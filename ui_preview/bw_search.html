@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390px, initial-scale=1.0">
+<title>AuraMusic - Search (Volt Neon)</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg: #09090C;
+    --surface: rgba(18, 18, 22, 0.85);
+    --border: rgba(255, 255, 255, 0.08);
+    --accent: #D2F535;
+    --white: #FFFFFF;
+    --gray: rgba(255, 255, 255, 0.45);
+  }
+  body{background:var(--bg);color:var(--white);font-family:'Inter',sans-serif;width:390px;min-height:844px;position:relative}
+
+  /* Ambient backdrop glows */
+  body::before {
+    content: '';
+    position: absolute;
+    top: -50px;
+    left: -50px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .header{padding:52px 24px 16px;position:relative;z-index:1}
+  .page-title{font-family:'Outfit',sans-serif;font-size:26px;font-weight:800;color:var(--white);letter-spacing:-0.02em}
+
+  .search-active{margin:16px 24px 0;background:var(--surface);border:1.5px solid var(--accent);border-radius:12px;height:52px;display:flex;align-items:center;gap:12px;padding:0 16px;position:relative;z-index:1;box-shadow: 0 0 10px rgba(210, 245, 53, 0.1)}
+  .search-active svg{width:20px;height:20px;color:var(--accent);flex-shrink:0}
+  .search-active input{background:none;border:none;outline:none;font-family:'Inter',sans-serif;font-size:14px;color:var(--white);flex:1;caret-color:var(--accent)}
+  .search-active input::placeholder{color:var(--gray)}
+  .clear-btn{color:var(--gray);cursor:pointer}
+  .clear-btn svg{width:18px;height:18px}
+
+  .filter-row{display:flex;gap:8px;padding:16px 24px 0;overflow-x:auto;scrollbar-width:none;position:relative;z-index:1}
+  .filter-row::-webkit-scrollbar{display:none}
+  .chip{flex-shrink:0;padding:7px 14px;border-radius:99px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:0.06em;cursor:pointer;border:1px solid var(--border);color:var(--gray);background:transparent;transition:all 0.2s}
+  .chip.active{background:var(--accent);border-color:var(--accent);color:#000000;font-weight:700}
+
+  .section-header{display:flex;align-items:center;justify-content:space-between;padding:24px 24px 12px;position:relative;z-index:1}
+  .section-title{font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;color:var(--white);letter-spacing:-0.01em}
+  .see-all{font-family:'Inter',sans-serif;font-size:13px;color:var(--gray);cursor:pointer}
+  .see-all:hover {color:var(--white)}
+
+  /* Browse Categories 3-col grid */
+  .categories-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:0 24px;position:relative;z-index:1}
+  .cat-card{border-radius:12px;height:72px;display:flex;align-items:flex-end;padding:10px 10px;cursor:pointer;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,0.06)}
+  .cat-label{font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;color:var(--white);position:relative;z-index:1}
+  .cat-bg{position:absolute;inset:0}
+  .c-pop{background:linear-gradient(135deg,#1c1c1e,#0a0a0c)}
+  .c-hiphop{background:linear-gradient(135deg,#0d0d0d,#020202)}
+  .c-rnb{background:linear-gradient(135deg,#2c2c2e,#101012)}
+  .c-rock{background:linear-gradient(135deg,#222,#0a0a0c)}
+  .c-electronic{background:linear-gradient(135deg,#1a1a1a,#050505)}
+  .c-indie{background:linear-gradient(135deg,#2a2a2c,#0c0c0e)}
+  .c-jazz{background:linear-gradient(135deg,#141416,#08080a)}
+  .c-classical{background:linear-gradient(135deg,#1f1f22,#0d0d0f)}
+  .c-kpop{background:linear-gradient(135deg,#252528,#121214)}
+  .cat-accent{position:absolute;top:-10px;right:-10px;width:50px;height:50px;border-radius:50%;opacity:0.12;background:var(--accent)}
+
+  /* Top Results */
+  .top-result{margin:0 24px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;display:flex;gap:16px;align-items:center;position:relative;z-index:1}
+  .top-result-art{width:72px;height:72px;border-radius:12px;flex-shrink:0;background:linear-gradient(135deg,#1c1c1e,#2c2c2e);position:relative;overflow:hidden;box-shadow:0 0 20px rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08)}
+  .top-result-art-inner{position:absolute;inset:0;background:radial-gradient(ellipse at 40% 40%,rgba(210,245,53,0.15),transparent 60%)}
+  .top-result-tag{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--accent);letter-spacing:0.12em;text-transform:uppercase;opacity:0.8}
+  .top-result-name{font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;color:var(--white);margin-top:4px;letter-spacing:-0.01em}
+  .top-result-sub{font-family:'Inter',sans-serif;font-size:13px;color:var(--gray);margin-top:2px}
+  .play-circle{width:44px;height:44px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(210,245,53,0.3);margin-left:auto}
+  .play-circle svg{width:18px;height:18px;fill:#000000}
+
+  /* Songs list */
+  .song-list{padding:0 24px;display:flex;flex-direction:column;gap:0;position:relative;z-index:1}
+  .song-row{display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,0.06);cursor:pointer}
+  .song-row:last-child{border-bottom:none}
+  .song-num{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gray);width:20px;text-align:center;flex-shrink:0}
+  .song-thumb{width:48px;height:48px;border-radius:8px;flex-shrink:0;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,0.05)}
+  .song-thumb-inner{position:absolute;inset:0}
+  .song-info{flex:1}
+  .song-name{font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;color:var(--white)}
+  .song-artist{font-family:'Inter',sans-serif;font-size:12px;color:var(--gray);margin-top:2px}
+  .song-dur{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gray)}
+
+  /* BOTTOM NAV */
+  .bottom-nav { margin:24px 24px 16px; background:var(--surface); border:1px solid var(--border); border-radius:28px; padding:12px 8px; display:flex; align-items:center; justify-content:space-around; height:68px; position:relative; z-index:1 }
+  .nav-item { display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; padding:4px 12px; border-radius:20px; transition:all 0.2s; }
+  .nav-item.active { background:var(--accent); width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center; padding:0; box-shadow: 0 4px 14px rgba(210, 245, 53, 0.35); }
+  .nav-item svg { width:22px; height:22px; color:rgba(255,255,255,0.45); }
+  .nav-item.active svg { color:#000000; }
+  .nav-label { font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:500; color:rgba(255,255,255,0.4); }
+  .nav-item.active .nav-label { display:none; }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="page-title">Search</div>
+  </div>
+
+  <div class="search-active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" placeholder="Artists, songs, podcasts" value="The Weeknd">
+    <div class="clear-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+  </div>
+
+  <div class="filter-row">
+    <div class="chip active">All</div>
+    <div class="chip">Songs</div>
+    <div class="chip">Artists</div>
+    <div class="chip">Albums</div>
+    <div class="chip">Playlists</div>
+  </div>
+
+  <div class="section-header"><span class="section-title">Top Result</span></div>
+  <div class="top-result">
+    <div class="top-result-art"><div class="top-result-art-inner"></div></div>
+    <div>
+      <div class="top-result-tag">Artist</div>
+      <div class="top-result-name">The Weeknd</div>
+      <div class="top-result-sub">102.4M monthly listeners</div>
+    </div>
+    <div class="play-circle"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+  </div>
+
+  <div class="section-header"><span class="section-title">Songs</span><span class="see-all">See all</span></div>
+  <div class="song-list">
+    <div class="song-row">
+      <span class="song-num">1</span>
+      <div class="song-thumb"><div class="song-thumb-inner" style="background:linear-gradient(135deg,#1c1c1e,#0a0a0c)"></div></div>
+      <div class="song-info"><div class="song-name">Blinding Lights</div><div class="song-artist">The Weeknd</div></div>
+      <span class="song-dur">3:53</span>
+    </div>
+    <div class="song-row">
+      <span class="song-num">2</span>
+      <div class="song-thumb"><div class="song-thumb-inner" style="background:linear-gradient(135deg,#111,#050505)"></div></div>
+      <div class="song-info"><div class="song-name">Starboy</div><div class="song-artist">The Weeknd, Daft Punk</div></div>
+      <span class="song-dur">3:50</span>
+    </div>
+    <div class="song-row">
+      <span class="song-num">3</span>
+      <div class="song-thumb"><div class="song-thumb-inner" style="background:linear-gradient(135deg,#222,#0a0a0c)"></div></div>
+      <div class="song-info"><div class="song-name">Save Your Tears</div><div class="song-artist">The Weeknd</div></div>
+      <span class="song-dur">3:36</span>
+    </div>
+    <div class="song-row">
+      <span class="song-num">4</span>
+      <div class="song-thumb"><div class="song-thumb-inner" style="background:linear-gradient(135deg,#2c2c2e,#0c0c0e)"></div></div>
+      <div class="song-info"><div class="song-name">Call Out My Name</div><div class="song-artist">The Weeknd</div></div>
+      <span class="song-dur">3:48</span>
+    </div>
+  </div>
+
+  <div class="section-header"><span class="section-title">Browse Categories</span></div>
+  <div class="categories-grid">
+    <div class="cat-card c-pop"><div class="cat-accent"></div><span class="cat-label">Pop</span></div>
+    <div class="cat-card c-hiphop"><div class="cat-accent"></div><span class="cat-label">Hip-Hop</span></div>
+    <div class="cat-card c-rnb"><div class="cat-accent"></div><span class="cat-label">R&B</span></div>
+    <div class="cat-card c-rock"><div class="cat-accent"></div><span class="cat-label">Rock</span></div>
+    <div class="cat-card c-electronic"><div class="cat-accent"></div><span class="cat-label">Electronic</span></div>
+    <div class="cat-card c-indie"><div class="cat-accent"></div><span class="cat-label">Indie</span></div>
+    <div class="cat-card c-jazz"><div class="cat-accent"></div><span class="cat-label">Jazz</span></div>
+    <div class="cat-card c-classical"><div class="cat-accent"></div><span class="cat-label">Classical</span></div>
+    <div class="cat-card c-kpop"><div class="cat-accent"></div><span class="cat-label">K-Pop</span></div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span class="nav-label">Home</span>
+    </div>
+    <div class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span class="nav-label">Search</span>
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      <span class="nav-label">Library</span>
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span class="nav-label">Profile</span>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390px, initial-scale=1.0">
+<title>AuraMusic - Home (Volt Neon)</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --bg: #09090C;
+    --surface: rgba(18, 18, 22, 0.85);
+    --border: rgba(255, 255, 255, 0.08);
+    --accent: #D2F535;
+    --white: #FFFFFF;
+    --gray: rgba(255, 255, 255, 0.45);
+  }
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    width: 390px;
+    min-height: 844px;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Ambient backdrop glows */
+  body::before {
+    content: '';
+    position: absolute;
+    top: -50px;
+    left: -50px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: absolute;
+    bottom: 50px;
+    right: -50px;
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(210, 245, 53, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* HEADER */
+  .header { display:flex; align-items:center; justify-content:space-between; padding:52px 24px 16px; }
+  .logo { display:flex; align-items:center; gap:6px; }
+  .logo-text { font-family:'Outfit',sans-serif; font-weight:800; font-size:20px; color:var(--white); letter-spacing:-0.02em; }
+  .logo-dot { width:6px; height:6px; background:var(--accent); border-radius:50%; }
+  .header-right { display:flex; align-items:center; gap:12px; }
+  .icon-btn { width:40px; height:40px; display:flex; align-items:center; justify-content:center; color:var(--white); cursor:pointer; }
+  .avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#222,#111); border:2px solid var(--accent); display:flex; align-items:center; justify-content:center; font-family:'Outfit',sans-serif; font-size:13px; font-weight:700; color:var(--white); }
+
+  /* GREETING */
+  .greeting { padding:8px 24px 0; }
+  .greeting-main { font-family:'Outfit',sans-serif; font-size:26px; font-weight:800; color:var(--white); letter-spacing:-0.02em; }
+
+  /* FILTER CHIPS (TABS) */
+  .filter-row { display:flex; gap:8px; padding:16px 24px 0; overflow-x:auto; scrollbar-width:none; }
+  .filter-row::-webkit-scrollbar { display:none; }
+  .chip { flex-shrink:0; padding:7px 14px; border-radius:99px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500; letter-spacing:0.06em; cursor:pointer; border:1px solid var(--border); color:var(--gray); background:transparent; transition:all 0.2s; }
+  .chip.active { background:var(--accent); border-color:var(--accent); color:#000000; font-weight:700; }
+
+  /* SEARCH BAR */
+  .search-bar { margin:16px 24px 0; background:var(--surface); border:1px solid var(--border); border-radius:12px; height:52px; display:flex; align-items:center; gap:12px; padding:0 16px; cursor:text; }
+  .search-bar svg { width:20px; height:20px; color:rgba(255,255,255,0.4); flex-shrink:0; }
+  .search-placeholder { font-family:'Inter',sans-serif; font-size:14px; color:var(--gray); flex:1; }
+  .mic-btn { color:var(--gray); }
+
+  /* FEATURED CARD */
+  .featured { margin:20px 24px 0; background:linear-gradient(135deg, #181124 0%, #0c0814 100%); border:1px solid rgba(139,92,246,0.25); border-radius:20px; padding:20px; display:flex; gap:16px; align-items:center; position:relative; overflow:hidden; }
+  .featured::before { content:''; position:absolute; top:-20px; right:-20px; width:150px; height:150px; background:radial-gradient(circle,rgba(139,92,246,0.3),transparent 70%); pointer-events:none; }
+  .featured-thumb { width:80px; height:80px; border-radius:12px; background:linear-gradient(135deg,#8B5CF6,#EC4899); flex-shrink:0; position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.1); }
+  .featured-thumb-inner { position:absolute; inset:0; background:radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), transparent 60%); }
+  .featured-info { flex:1; position:relative; z-index:1; }
+  .featured-tag { font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:500; color:var(--white); letter-spacing:0.12em; text-transform:uppercase; opacity:0.5; }
+  .featured-title { font-family:'Outfit',sans-serif; font-size:18px; font-weight:800; color:var(--white); margin-top:4px; letter-spacing:-0.01em; }
+  .featured-meta { font-family:'Inter',sans-serif; font-size:12px; color:var(--gray); margin-top:4px; line-height:1.4; }
+  .play-pill { display:inline-flex; align-items:center; gap:6px; background:var(--accent); padding:7px 14px; border-radius:99px; margin-top:12px; cursor:pointer; box-shadow:0 4px 12px rgba(210,245,53,0.3); }
+  .play-pill span { font-family:'JetBrains Mono',monospace; font-size:10px; color:#000000; letter-spacing:0.08em; font-weight:700; }
+  .play-pill svg { width:12px; height:12px; fill:#000000; }
+
+  /* SECTION HEADER */
+  .section-header { display:flex; align-items:center; justify-content:space-between; padding:24px 24px 12px; }
+  .section-title { font-family:'Outfit',sans-serif; font-size:16px; font-weight:700; color:var(--white); letter-spacing:-0.01em; }
+  .see-all { font-family:'Inter',sans-serif; font-size:13px; color:var(--gray); cursor:pointer; transition:color 0.2s; }
+  .see-all:hover { color:var(--white); }
+
+  /* RECENTLY PLAYED - horizontal scroll */
+  .horizontal-scroll { display:flex; gap:12px; padding:0 24px; overflow-x:auto; scrollbar-width:none; }
+  .horizontal-scroll::-webkit-scrollbar { display:none; }
+  .mini-card { flex-shrink:0; width:80px; cursor:pointer; }
+  .mini-card-art { width:80px; height:80px; border-radius:10px; background:linear-gradient(135deg,#1c1c1e,#0a0a0c); position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.08); }
+  .mini-card-art-inner { position:absolute; inset:0; }
+  .mini-card-name { font-family:'Outfit',sans-serif; font-size:12px; font-weight:600; color:var(--white); margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mini-card-artist { font-family:'Inter',sans-serif; font-size:11px; color:var(--gray); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  /* SONG LIST */
+  .song-list { padding:0 24px; display:flex; flex-direction:column; gap:0; }
+  .song-row { display:flex; align-items:center; gap:14px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.06); cursor:pointer; }
+  .song-row:last-child { border-bottom:none; }
+  .song-thumb { width:48px; height:48px; border-radius:8px; background:var(--surface); flex-shrink:0; position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.05); }
+  .song-thumb-inner { position:absolute; inset:0; }
+  .eq-indicator { position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:center; gap:2px; padding:8px 10px; }
+  .eq-bar { width:3px; background:var(--accent); border-radius:1px; animation:eq 0.8s ease-in-out infinite; }
+  .eq-bar:nth-child(1) { height:8px; animation-delay:0s; }
+  .eq-bar:nth-child(2) { height:14px; animation-delay:0.15s; }
+  .eq-bar:nth-child(3) { height:10px; animation-delay:0.3s; }
+  @keyframes eq { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(0.3)} }
+  .song-info { flex:1; }
+  .song-name { font-family:'Outfit',sans-serif; font-size:14px; font-weight:600; color:var(--white); }
+  .song-artist-s { font-family:'Inter',sans-serif; font-size:12px; color:var(--gray); margin-top:2px; }
+  .song-duration { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--gray); }
+  .three-dot { color:var(--gray); display:flex; align-items:center; }
+  .three-dot svg { width:18px; height:18px; }
+
+  /* MADE FOR YOU - 2x2 grid */
+  .grid-2x2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 24px; }
+  .playlist-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; cursor:pointer; }
+  .playlist-card-top { height:80px; border-bottom:1px solid rgba(255,255,255,0.05); }
+  .pt-dark-gray { background:linear-gradient(135deg,#222,#0a0a0c); }
+  .pt-gray { background:linear-gradient(135deg,#1c1c1e,#080808); }
+  .pt-char { background:linear-gradient(135deg,#2c2c2e,#0c0c0e); }
+  .pt-light-gray { background:linear-gradient(135deg,#333,#1a1a1a); }
+  .playlist-card-info { padding:10px 12px; }
+  .playlist-name { font-family:'Outfit',sans-serif; font-size:13px; font-weight:600; color:var(--white); }
+  .playlist-count { font-family:'Inter',sans-serif; font-size:11px; color:var(--gray); margin-top:2px; }
+
+  /* BOTTOM NAV */
+  .bottom-nav { margin:24px 24px 16px; background:var(--surface); border:1px solid var(--border); border-radius:28px; padding:12px 8px; display:flex; align-items:center; justify-content:space-around; height:68px; }
+  .nav-item { display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; padding:4px 12px; border-radius:20px; transition:all 0.2s; }
+  .nav-item.active { background:var(--accent); width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center; padding:0; box-shadow: 0 4px 14px rgba(210, 245, 53, 0.35); }
+  .nav-item svg { width:22px; height:22px; color:rgba(255,255,255,0.45); }
+  .nav-item.active svg { color:#000000; }
+  .nav-label { font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:500; color:rgba(255,255,255,0.4); }
+  .nav-item.active .nav-label { display:none; }
+</style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <span class="logo-text">AuraMusic</span>
+      <div class="logo-dot"></div>
+    </div>
+    <div class="header-right">
+      <div class="icon-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+      </div>
+      <div class="avatar">A</div>
+    </div>
+  </div>
+
+  <!-- GREETING -->
+  <div class="greeting">
+    <div class="greeting-sub">Good Evening</div>
+    <div class="greeting-main">What do you want to hear?</div>
+  </div>
+
+  <!-- FILTER CHIPS (TABS) -->
+  <div class="filter-row">
+    <div class="chip active">All</div>
+    <div class="chip">New Release</div>
+    <div class="chip">Trending</div>
+    <div class="chip">Top Artists</div>
+  </div>
+
+  <!-- SEARCH BAR -->
+  <div class="search-bar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <span class="search-placeholder">Search songs, artists...</span>
+    <div class="mic-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+    </div>
+  </div>
+
+  <!-- Curated Card -->
+  <div class="featured">
+    <div class="featured-thumb">
+      <div class="featured-thumb-inner"></div>
+    </div>
+    <div class="featured-info">
+      <div class="featured-tag">Curated & trending</div>
+      <div class="featured-title">Discover weekly</div>
+      <div class="featured-meta">The original slow instrumental best playlists.</div>
+      <div class="play-pill">
+        <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <span>PLAY</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECENTLY PLAYED -->
+  <div class="section-header">
+    <span class="section-title">Recently Played</span>
+    <span class="see-all">See all</span>
+  </div>
+  <div class="horizontal-scroll">
+    <div class="mini-card">
+      <div class="mini-card-art"><div class="mini-card-art-inner" style="background:linear-gradient(135deg,#2c2c2e,#0a0a0c)"></div></div>
+      <div class="mini-card-name">Starlit Reverie</div>
+      <div class="mini-card-artist">Budiarti</div>
+    </div>
+    <div class="mini-card">
+      <div class="mini-card-art"><div class="mini-card-art-inner" style="background:linear-gradient(135deg,#1c1c1e,#050505)"></div></div>
+      <div class="mini-card-name">Circles</div>
+      <div class="mini-card-artist">Post Malone</div>
+    </div>
+    <div class="mini-card">
+      <div class="mini-card-art"><div class="mini-card-art-inner" style="background:linear-gradient(135deg,#333,#080808)"></div></div>
+      <div class="mini-card-name">Levitating</div>
+      <div class="mini-card-artist">Dua Lipa</div>
+    </div>
+    <div class="mini-card">
+      <div class="mini-card-art"><div class="mini-card-art-inner" style="background:linear-gradient(135deg,#1a1a1a,#0c0c0e)"></div></div>
+      <div class="mini-card-name">Save Your Tears</div>
+      <div class="mini-card-artist">The Weeknd</div>
+    </div>
+  </div>
+
+  <!-- TRENDING NOW -->
+  <div class="section-header">
+    <span class="section-title">Trending Now</span>
+    <span class="see-all">See all</span>
+  </div>
+  <div class="song-list">
+    <div class="song-row">
+      <div class="song-thumb" style="background:linear-gradient(135deg,#1c1c1e,#0a0a0c)">
+        <div class="eq-indicator">
+          <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+        </div>
+      </div>
+      <div class="song-info">
+        <div class="song-name">Starlit Reverie</div>
+        <div class="song-artist-s">Budiarti</div>
+      </div>
+      <span class="song-duration">3:15</span>
+      <div class="three-dot"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></div>
+    </div>
+    <div class="song-row">
+      <div class="song-thumb" style="background:linear-gradient(135deg,#111,#050505)">
+        <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(255,255,255,0.06),transparent)"></div>
+      </div>
+      <div class="song-info">
+        <div class="song-name">Stay</div>
+        <div class="song-artist-s">The Kid LAROI, Justin Bieber</div>
+      </div>
+      <span class="song-duration">2:21</span>
+      <div class="three-dot"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></div>
+    </div>
+    <div class="song-row">
+      <div class="song-thumb" style="background:linear-gradient(135deg,#2c2c2e,#0c0c0e)">
+        <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(255,255,255,0.05),transparent)"></div>
+      </div>
+      <div class="song-info">
+        <div class="song-name">Heat Waves</div>
+        <div class="song-artist-s">Glass Animals</div>
+      </div>
+      <span class="song-duration">3:59</span>
+      <div class="three-dot"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></div>
+    </div>
+  </div>
+
+  <!-- MADE FOR YOU -->
+  <div class="section-header">
+    <span class="section-title">Made For You</span>
+    <span class="see-all">See all</span>
+  </div>
+  <div class="grid-2x2">
+    <div class="playlist-card">
+      <div class="playlist-card-top pt-dark-gray"></div>
+      <div class="playlist-card-info">
+        <div class="playlist-name">Dark Hours</div>
+        <div class="playlist-count">24 songs</div>
+      </div>
+    </div>
+    <div class="playlist-card">
+      <div class="playlist-card-top pt-gray"></div>
+      <div class="playlist-card-info">
+        <div class="playlist-name">Chill Vibes</div>
+        <div class="playlist-count">18 songs</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <div class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span class="nav-label">Home</span>
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span class="nav-label">Search</span>
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      <span class="nav-label">Library</span>
+    </div>
+    <div class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span class="nav-label">Profile</span>
+    </div>
+  </div>
+
+</body>
+</html>
