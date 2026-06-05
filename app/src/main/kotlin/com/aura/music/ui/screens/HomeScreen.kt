@@ -1,144 +1,142 @@
 /*
- * AuraMusic - by Nikhil
- * Nikhil
+ * AuraMusic - by Antigravity
  * Licensed Under GPL-3.0
  */
-
-
 
 package com.aura.music.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.pullToRefresh
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults.Indicator
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.currentBackStackEntryAsState
-import com.aura.music.innertube.models.AlbumItem
-import com.aura.music.innertube.models.ArtistItem
-import com.aura.music.innertube.models.PlaylistItem
-import com.aura.music.innertube.models.SongItem
-import com.aura.music.innertube.utils.parseCookieString
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.aura.music.LocalDatabase
-import com.aura.music.LocalPlayerAwareWindowInsets
 import com.aura.music.LocalPlayerConnection
 import com.aura.music.R
-import com.aura.music.constants.InnerTubeCookieKey
-import com.aura.music.constants.DisableBlurKey
-import com.aura.music.constants.ShowHomeCategoryChipsKey
+import com.aura.music.constants.CustomThemeColorKey
+import com.aura.music.db.entities.Song
+import com.aura.music.db.entities.LocalItem
 import com.aura.music.db.entities.Album
 import com.aura.music.db.entities.Artist
 import com.aura.music.db.entities.Playlist
-import com.aura.music.db.entities.Song
+import com.aura.music.innertube.models.PlaylistItem
+import com.aura.music.innertube.models.SongItem
+import com.aura.music.innertube.toHighResThumbnail
 import com.aura.music.models.toMediaMetadata
-import com.aura.music.playback.queues.LocalAlbumRadio
-import com.aura.music.playback.queues.YouTubeAlbumRadio
 import com.aura.music.playback.queues.YouTubeQueue
-import com.aura.music.ui.component.ChipsRow
-import com.aura.music.ui.component.HideOnScrollFAB
-import com.aura.music.ui.component.LocalBottomSheetPageState
 import com.aura.music.ui.component.LocalMenuState
-import com.aura.music.ui.component.NavigationTitle
-import com.aura.music.ui.utils.SnapLayoutInfoProvider
+import com.aura.music.ui.menu.SongMenu
 import com.aura.music.utils.rememberPreference
 import com.aura.music.viewmodels.HomeViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
+import com.aura.music.extensions.togglePlayPause
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlin.random.Random
+import java.net.URLEncoder
 
-
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val menuState = LocalMenuState.current
-    val bottomSheetPageState = LocalBottomSheetPageState.current
-    val database = LocalDatabase.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
 
     val isPlaying by playerConnection.isPlaying.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
 
     val quickPicks by viewModel.quickPicks.collectAsState()
-    val forgottenFavorites by viewModel.forgottenFavorites.collectAsState()
     val keepListening by viewModel.keepListening.collectAsState()
     val homePage by viewModel.homePage.collectAsState()
-    val explorePage by viewModel.explorePage.collectAsState()
     val forYouSuggestions by viewModel.forYouSuggestions.collectAsState()
-
-    val allLocalItems by viewModel.allLocalItems.collectAsState()
-    val allYtItems by viewModel.allYtItems.collectAsState()
     val selectedChip by viewModel.selectedChip.collectAsState()
 
-    val isLoading: Boolean by viewModel.isLoading.collectAsState()
-    val isMoodAndGenresLoading = isLoading && explorePage?.moodAndGenres == null
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val pullRefreshState = rememberPullToRefreshState()
+    val lazyListState = rememberLazyListState()
 
-    val forgottenFavoritesLazyGridState = rememberLazyGridState()
+    // 1. Theme Configuration
+    val (customThemeColorValue) = rememberPreference(CustomThemeColorKey, defaultValue = "volt_neon")
+    val isVolt = customThemeColorValue == "volt_neon"
+    val isCrimson = customThemeColorValue == "crimson"
 
-    val accountName by viewModel.accountName.collectAsState()
-    val accountImageUrl by viewModel.accountImageUrl.collectAsState()
-    val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
-    val (disableBlur) = rememberPreference(DisableBlurKey, true)
-    val (showHomeCategoryChips) = rememberPreference(ShowHomeCategoryChipsKey, true)
-    val isLoggedIn = remember(innerTubeCookie) {
-        "SAPISID" in parseCookieString(innerTubeCookie)
-    }
-    val url = if (isLoggedIn) accountImageUrl else null
-
-    val scope = rememberCoroutineScope()
-    val lazylistState = rememberLazyListState()
-    val backStackEntry by navController.currentBackStackEntryAsState()
-    val scrollToTop =
-        backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsState()
-
-    LaunchedEffect(scrollToTop?.value) {
-        if (scrollToTop?.value == true) {
-            lazylistState.animateScrollToItem(0)
-            backStackEntry?.savedStateHandle?.set("scrollToTop", false)
-        }
+    val accent = when {
+        isVolt -> Color(0xFFD2F535)
+        isCrimson -> Color(0xFFE8002D)
+        else -> MaterialTheme.colorScheme.primary
     }
 
+    val background = when {
+        isVolt -> Color(0xFF09090C)
+        isCrimson -> Color(0xFF0D0D0D)
+        else -> MaterialTheme.colorScheme.background
+    }
+
+    val surface = when {
+        isVolt -> Color(0xDA121216)
+        isCrimson -> Color(0xDA151515)
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+
+    val border = when {
+        isVolt -> Color(0x14FFFFFF)
+        isCrimson -> Color(0x1A4A151B)
+        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
+    }
+
+    // Pagination logic
     LaunchedEffect(Unit) {
-        snapshotFlow { lazylistState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+        snapshotFlow { lazyListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
             .collect { lastVisibleIndex ->
-                val len = lazylistState.layoutInfo.totalItemsCount
+                val len = lazyListState.layoutInfo.totalItemsCount
                 if (lastVisibleIndex != null && lastVisibleIndex >= len - 3) {
                     viewModel.loadMoreYouTubeItems(homePage?.continuation)
                 }
@@ -147,415 +145,755 @@ fun HomeScreen(
 
     if (selectedChip != null) {
         BackHandler {
-
             viewModel.toggleChip(selectedChip)
         }
     }
 
-    LaunchedEffect(showHomeCategoryChips, selectedChip) {
-        if (!showHomeCategoryChips && selectedChip != null) {
-            viewModel.toggleChip(selectedChip)
-        }
-    }
-
-    LaunchedEffect(forgottenFavorites) {
-        forgottenFavoritesLazyGridState.scrollToItem(0)
-    }
-
-
-    val color1 = MaterialTheme.colorScheme.primary
-    val color2 = MaterialTheme.colorScheme.secondary
-    val color3 = MaterialTheme.colorScheme.tertiary
-    val color4 = MaterialTheme.colorScheme.primaryContainer
-    val color5 = MaterialTheme.colorScheme.secondaryContainer
-    val surfaceColor = MaterialTheme.colorScheme.surface
-    
     Box(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .background(background)
+            .pullToRefresh(
+                state = pullRefreshState,
+                isRefreshing = isRefreshing,
+                onRefresh = viewModel::refresh
+            )
     ) {
-
-        if (!disableBlur) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxSize(0.7f)
-                    .align(Alignment.TopCenter)
-                    .zIndex(-1f) // Place behind all content
-                    .drawWithCache {
-                        val width = this.size.width
-                        val height = this.size.height
-
-
-                        val brush1 = Brush.radialGradient(
-                            colors = listOf(
-                                color1.copy(alpha = 0.38f),
-                                color1.copy(alpha = 0.24f),
-                                color1.copy(alpha = 0.14f),
-                                color1.copy(alpha = 0.06f),
-                                Color.Transparent
-                            ),
-                            center = Offset(width * 0.15f, height * 0.1f),
-                            radius = width * 0.55f
-                        )
-
-
-                        val brush2 = Brush.radialGradient(
-                            colors = listOf(
-                                color2.copy(alpha = 0.34f),
-                                color2.copy(alpha = 0.2f),
-                                color2.copy(alpha = 0.11f),
-                                color2.copy(alpha = 0.05f),
-                                Color.Transparent
-                            ),
-                            center = Offset(width * 0.85f, height * 0.2f),
-                            radius = width * 0.65f
-                        )
-
-
-                        val brush3 = Brush.radialGradient(
-                            colors = listOf(
-                                color3.copy(alpha = 0.3f),
-                                color3.copy(alpha = 0.17f),
-                                color3.copy(alpha = 0.09f),
-                                color3.copy(alpha = 0.04f),
-                                Color.Transparent
-                            ),
-                            center = Offset(width * 0.3f, height * 0.45f),
-                            radius = width * 0.6f
-                        )
-
-
-                        val brush4 = Brush.radialGradient(
-                            colors = listOf(
-                                color4.copy(alpha = 0.26f),
-                                color4.copy(alpha = 0.14f),
-                                color4.copy(alpha = 0.08f),
-                                color4.copy(alpha = 0.03f),
-                                Color.Transparent
-                            ),
-                            center = Offset(width * 0.7f, height * 0.5f),
-                            radius = width * 0.7f
-                        )
-
-
-                        val brush5 = Brush.radialGradient(
-                            colors = listOf(
-                                color5.copy(alpha = 0.22f),
-                                color5.copy(alpha = 0.12f),
-                                color5.copy(alpha = 0.06f),
-                                color5.copy(alpha = 0.02f),
-                                Color.Transparent
-                            ),
-                            center = Offset(width * 0.5f, height * 0.75f),
-                            radius = width * 0.8f
-                        )
-
-
-                        val overlayBrush = Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.Transparent,
-                                surfaceColor.copy(alpha = 0.22f),
-                                surfaceColor.copy(alpha = 0.55f),
-                                surfaceColor
-                            ),
-                            startY = height * 0.4f,
-                            endY = height
-                        )
-
-                        onDrawBehind {
-                            drawRect(brush = brush1)
-                            drawRect(brush = brush2)
-                            drawRect(brush = brush3)
-                            drawRect(brush = brush4)
-                            drawRect(brush = brush5)
-                            drawRect(brush = overlayBrush)
-                        }
-                    }
-            ) {}
-        }
-        
-        BoxWithConstraints(
+        LazyColumn(
+            state = lazyListState,
             modifier = Modifier
                 .fillMaxSize()
-                .pullToRefresh(
-                    state = pullRefreshState,
-                    isRefreshing = isRefreshing,
-                    onRefresh = viewModel::refresh
-                )
+                .navigationBarsPadding(),
+            contentPadding = PaddingValues(bottom = 90.dp)
         ) {
-            val horizontalLazyGridItemWidthFactor = if (maxWidth * 0.475f >= 320.dp) 0.475f else 0.9f
-            val horizontalLazyGridItemWidth = maxWidth * horizontalLazyGridItemWidthFactor
-            val forgottenFavoritesSnapLayoutInfoProvider = remember(forgottenFavoritesLazyGridState) {
-                SnapLayoutInfoProvider(
-                    lazyGridState = forgottenFavoritesLazyGridState,
-                    positionInLayout = { layoutSize, itemSize ->
-                        (layoutSize * horizontalLazyGridItemWidthFactor / 2f - itemSize / 2f)
+            // Header
+            item {
+                HomeHeader(accent = accent, isVolt = isVolt, navController = navController)
+            }
+
+            // Greetings
+            item {
+                HomeGreetings()
+            }
+
+            // Filter Chips
+            item {
+                HomeFilterChips(
+                    chips = homePage?.chips.orEmpty().map { it to it.title },
+                    selectedChip = selectedChip,
+                    accent = accent,
+                    isVolt = isVolt,
+                    onChipSelect = { viewModel.toggleChip(it) }
+                )
+            }
+
+            // Search Bar
+            item {
+                HomeSearchBar(accent = accent, navController = navController)
+            }
+
+            // Curated / Featured Banner Card
+            item {
+                HomeFeaturedCard(
+                    accent = accent,
+                    isVolt = isVolt,
+                    isCrimson = isCrimson,
+                    onPlayClick = {
+                        quickPicks?.takeIf { it.isNotEmpty() }?.let { picks ->
+                            playerConnection.playQueue(YouTubeQueue.radio(picks.first().toMediaMetadata()))
+                        }
                     }
                 )
             }
 
-            LazyColumn(
-                state = lazylistState,
-                contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues()
-            ) {
-                if (showHomeCategoryChips) {
-                    item {
-                        ChipsRow(
-                            chips = homePage?.chips.orEmpty().map { it to it.title },
-                            currentValue = selectedChip,
-                            onValueUpdate = {
-                                viewModel.toggleChip(it)
-                            }
-                        )
-                    }
-                }
-
-                quickPicks?.takeIf { it.isNotEmpty() }?.let { picks ->
-            /*
+            // Recently Played Section
+            val keepListeningItems = keepListening.orEmpty()
+            if (keepListeningItems.isNotEmpty()) {
                 item {
-                    NavigationTitle(
-                        title = stringResource(R.string.quick_picks),
-                        modifier = Modifier.animateItem()
+                    HomeSectionHeader(title = "Recently Played", onSeeAll = { navController.navigate("history") })
+                }
+                item {
+                    HomeHorizontalScroll(
+                        items = keepListeningItems,
+                        navController = navController,
+                        playerConnection = playerConnection
                     )
                 }
-            */
+            }
 
+            // Trending Now Section
+            val trendingSongs = quickPicks.orEmpty()
+            if (trendingSongs.isNotEmpty()) {
                 item {
-                    QuickPicksSection(
-                        quickPicks = picks,
-                        mediaMetadata = mediaMetadata,
+                    HomeSectionHeader(title = "Trending Now", onSeeAll = { navController.navigate("explore") })
+                }
+                items(trendingSongs.take(5)) { song ->
+                    HomeSongRow(
+                        song = song,
+                        accent = accent,
+                        isActive = song.id == mediaMetadata?.id,
                         isPlaying = isPlaying,
-                        navController = navController,
                         playerConnection = playerConnection,
+                        navController = navController,
                         menuState = menuState,
                         haptic = haptic
                     )
                 }
             }
 
-
-            quickPicks?.takeIf { it.isNotEmpty() }?.let { picks ->
+            // Made For You Section
+            val suggestions = forYouSuggestions.orEmpty()
+            if (suggestions.isNotEmpty()) {
                 item {
-                    QuickPicksListSection(
-                        quickPicks = picks,
-                        mediaMetadata = mediaMetadata,
-                        isPlaying = isPlaying,
-                        navController = navController,
-                        playerConnection = playerConnection,
-                        menuState = menuState,
-                        haptic = haptic,
-                        modifier = Modifier.animateItem()
-                    )
-                }
-            }
-
-            keepListening?.takeIf { it.isNotEmpty() }?.let { items ->
-                item {
-                    NavigationTitle(
-                        title = stringResource(R.string.keep_listening),
-                        modifier = Modifier.animateItem()
-                    )
-                }
-
-                item {
-                    KeepListeningSection(
-                        keepListening = items,
-                        mediaMetadata = mediaMetadata,
-                        isPlaying = isPlaying,
-                        navController = navController,
-                        playerConnection = playerConnection,
-                        menuState = menuState,
-                        haptic = haptic,
-                        scope = scope
-                    )
-                }
-            }
-
-            AccountPlaylistsContainer(
-                viewModel = viewModel,
-                accountName = accountName,
-                accountImageUrl = url,
-                mediaMetadata = mediaMetadata,
-                isPlaying = isPlaying,
-                navController = navController,
-                playerConnection = playerConnection,
-                menuState = menuState,
-                haptic = haptic,
-                scope = scope
-            )
-
-            forgottenFavorites?.takeIf { it.isNotEmpty() }?.let { favorites ->
-                item {
-                    NavigationTitle(
-                        title = stringResource(R.string.forgotten_favorites),
-                        modifier = Modifier.animateItem()
-                    )
-                }
-
-                item {
-                    ForgottenFavoritesSection(
-                        forgottenFavorites = favorites,
-                        mediaMetadata = mediaMetadata,
-                        isPlaying = isPlaying,
-                        horizontalLazyGridItemWidth = horizontalLazyGridItemWidth,
-                        lazyGridState = forgottenFavoritesLazyGridState,
-                        snapLayoutInfoProvider = forgottenFavoritesSnapLayoutInfoProvider,
-                        navController = navController,
-                        playerConnection = playerConnection,
-                        menuState = menuState,
-                        haptic = haptic
-                    )
-                }
-            }
-
-            SimilarRecommendationsContainer(
-                viewModel = viewModel,
-                mediaMetadata = mediaMetadata,
-                isPlaying = isPlaying,
-                navController = navController,
-                playerConnection = playerConnection,
-                menuState = menuState,
-                haptic = haptic,
-                scope = scope
-            )
-
-            homePage?.sections?.forEach { section ->
-                val isCommunity = section.title?.contains("community", ignoreCase = true) == true ||
-                    section.title?.contains("From the", ignoreCase = true) == true ||
-                    section.title?.contains("Trending", ignoreCase = true) == true &&
-                    section.items.all { it is com.aura.music.innertube.models.PlaylistItem }
-
-                if (isCommunity) {
-                    item {
-                        CommunityPlaylistsSection(
-                            section = section,
-                            mediaMetadata = mediaMetadata,
-                            isPlaying = isPlaying,
-                            navController = navController,
-                            playerConnection = playerConnection,
-                            menuState = menuState,
-                            haptic = haptic,
-                            scope = scope,
-                            modifier = Modifier.animateItem()
-                        )
-                    }
-                } else {
-                    item {
-                        HomePageSectionTitle(
-                            section = section,
-                            navController = navController,
-                            modifier = Modifier.animateItem()
-                        )
-                    }
-
-                    item {
-                        HomePageSectionContent(
-                            section = section,
-                            mediaMetadata = mediaMetadata,
-                            isPlaying = isPlaying,
-                            navController = navController,
-                            playerConnection = playerConnection,
-                            menuState = menuState,
-                            haptic = haptic,
-                            scope = scope
-                        )
-                    }
-                }
-            }
-
-            if (isLoading || homePage?.continuation != null && homePage?.sections?.isNotEmpty() == true) {
-                item {
-                    HomeLoadingShimmer(modifier = Modifier.animateItem())
-                }
-            }
-
-            forYouSuggestions?.takeIf { it.isNotEmpty() }?.let { suggestions ->
-                item {
-                    ForYouSection(
-                        suggestions = suggestions,
-                        mediaMetadata = mediaMetadata,
-                        isPlaying = isPlaying,
-                        navController = navController,
-                        playerConnection = playerConnection,
-                        menuState = menuState,
-                        haptic = haptic,
-                        modifier = Modifier.animateItem()
-                    )
-                }
-            }
-
-            explorePage?.moodAndGenres?.let { genres ->
-                item {
-                    NavigationTitle(
-                        title = stringResource(R.string.mood_and_genres),
-                        onClick = { navController.navigate("mood_and_genres") },
-                        modifier = Modifier.animateItem()
-                    )
+                    HomeSectionHeader(title = "Made For You", onSeeAll = { navController.navigate("library") })
                 }
                 item {
-                    MoodAndGenresSection(
-                        moodAndGenres = genres,
+                    HomeMadeForYouGrid(
+                        playlists = suggestions.take(4),
+                        surface = surface,
+                        border = border,
                         navController = navController
                     )
                 }
             }
+        }
+    }
+}
 
-            if (isMoodAndGenresLoading) {
-                item {
-                    MoodAndGenresLoadingShimmer(modifier = Modifier.animateItem())
+@Composable
+fun HomeHeader(accent: Color, isVolt: Boolean, navController: NavController) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "AuraMusic",
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 22.sp,
+                    color = Color.White
+                )
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(accent)
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(
+                onClick = { navController.navigate("settings") },
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.settings),
+                    contentDescription = "Settings",
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .border(2.dp, accent, CircleShape)
+                    .background(Color(0xFF14141A)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "A",
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = Color.White
+                    )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun HomeGreetings() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = "Good Evening",
+            style = TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Normal,
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = "What do you want to hear?",
+            style = TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 24.sp,
+                color = Color.White
+            )
+        )
+    }
+}
+
+@Composable
+fun HomeFilterChips(
+    chips: List<Pair<com.aura.music.innertube.pages.HomePage.Chip, String>>,
+    selectedChip: com.aura.music.innertube.pages.HomePage.Chip?,
+    accent: Color,
+    isVolt: Boolean,
+    onChipSelect: (com.aura.music.innertube.pages.HomePage.Chip) -> Unit
+) {
+    if (chips.isEmpty()) return
+    LazyRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        contentPadding = PaddingValues(horizontal = 24.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(chips) { (chip, title) ->
+            val isSelected = selectedChip == chip
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(99.dp))
+                    .background(if (isSelected) accent else Color.Transparent)
+                    .border(1.dp, if (isSelected) accent else Color(0x22FFFFFF), RoundedCornerShape(99.dp))
+                    .clickable { onChipSelect(chip) }
+                    .padding(horizontal = 14.dp, vertical = 7.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        fontSize = 11.sp,
+                        color = if (isSelected) {
+                            if (isVolt) Color.Black else Color.White
+                        } else Color.Gray
+                    )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun HomeSearchBar(accent: Color, navController: NavController) {
+    var queryText by remember { mutableStateOf("") }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 8.dp)
+            .height(52.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF121216))
+            .border(1.dp, Color(0x14FFFFFF), RoundedCornerShape(12.dp))
+            .padding(horizontal = 16.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.search),
+                contentDescription = "Search",
+                tint = Color.Gray,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            BasicTextField(
+                value = queryText,
+                onValueChange = { queryText = it },
+                textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+                singleLine = true,
+                cursorBrush = SolidColor(accent),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = {
+                    if (queryText.isNotBlank()) {
+                        navController.navigate("search/${URLEncoder.encode(queryText, "UTF-8")}")
+                    }
+                }),
+                modifier = Modifier.weight(1f),
+                decorationBox = { innerTextField ->
+                    if (queryText.isEmpty()) {
+                        Text("Search songs, artists...", color = Color.Gray, fontSize = 14.sp)
+                    }
+                    innerTextField()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun HomeFeaturedCard(accent: Color, isVolt: Boolean, isCrimson: Boolean, onPlayClick: () -> Unit) {
+    val bgGradient = if (isCrimson) {
+        Brush.verticalGradient(listOf(Color(0xFF1E080A), Color(0xFF0D0D0D)))
+    } else {
+        Brush.verticalGradient(listOf(Color(0xFF181124), Color(0xFF09090C)))
+    }
+
+    val borderColor = if (isCrimson) Color(0x40E8002D) else Color(0x408B5CF6)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 16.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(bgGradient)
+            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
+            .padding(20.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = if (isCrimson) {
+                                listOf(Color(0xFFE8002D), Color(0xFF800015))
+                            } else {
+                                listOf(Color(0xFF8B5CF6), Color(0xFFEC4899))
+                            }
+                        )
+                    )
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "CURATED & TRENDING",
+                    style = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray
+                    )
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Discover weekly",
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 18.sp,
+                        color = Color.White
+                    )
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "The original slow instrumental best playlists.",
+                    style = TextStyle(fontSize = 12.sp, color = Color.Gray),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(99.dp))
+                        .background(accent)
+                        .clickable { onPlayClick() }
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.play),
+                        contentDescription = "Play",
+                        tint = if (isVolt) Color.Black else Color.White,
+                        modifier = Modifier.size(10.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "PLAY",
+                        style = TextStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 10.sp,
+                            color = if (isVolt) Color.Black else Color.White
+                        )
+                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun HomeSectionHeader(title: String, onSeeAll: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = Color.White
+            )
+        )
+        Text(
+            text = "See all",
+            modifier = Modifier.clickable { onSeeAll() },
+            style = TextStyle(fontSize = 13.sp, color = Color.Gray)
+        )
+    }
+}
+
+@Composable
+fun HomeHorizontalScroll(
+    items: List<LocalItem>,
+    navController: NavController,
+    playerConnection: com.aura.music.playback.PlayerConnection
+) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 24.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(items) { item ->
+            val title = when (item) {
+                is Song -> item.song.title
+                is Album -> item.album.title
+                is Artist -> item.artist.name
+                is Playlist -> item.playlist.name
+            }
+            val subtitle = when (item) {
+                is Song -> item.artists.joinToString { it.name }
+                is Album -> item.artists?.joinToString { it.name } ?: "Album"
+                is Artist -> "Artist"
+                is Playlist -> "Playlist"
+            }
+            val artUrl = when (item) {
+                is Song -> item.song.thumbnailUrl
+                is Album -> item.album.thumbnailUrl
+                is Artist -> item.artist.thumbnailUrl
+                is Playlist -> item.playlist.thumbnailUrl
+            }
+            val clickAction = {
+                when (item) {
+                    is Song -> playerConnection.playQueue(YouTubeQueue.radio(item.toMediaMetadata()))
+                    is Album -> navController.navigate("album/${item.id}")
+                    is Artist -> navController.navigate("artist/${item.id}")
+                    is Playlist -> navController.navigate("playlist/${item.id}")
+                }
             }
 
-            HideOnScrollFAB(
-                visible = allLocalItems.isNotEmpty() || allYtItems.isNotEmpty(),
-                lazyListState = lazylistState,
-                icon = R.drawable.shuffle,
+            Column(
+                modifier = Modifier
+                    .width(80.dp)
+                    .clickable { clickAction() }
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(artUrl)
+                        .crossfade(true)
+                        .build(),
+                    placeholder = painterResource(R.drawable.ic_music_placeholder),
+                    error = painterResource(R.drawable.ic_music_placeholder),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .border(1.dp, Color(0x14FFFFFF), RoundedCornerShape(10.dp))
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = title,
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp,
+                        color = Color.White
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = subtitle,
+                    style = TextStyle(fontSize = 11.sp, color = Color.Gray),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun HomeSongRow(
+    song: Song,
+    accent: Color,
+    isActive: Boolean,
+    isPlaying: Boolean,
+    playerConnection: com.aura.music.playback.PlayerConnection,
+    navController: NavController,
+    menuState: com.aura.music.ui.component.MenuState,
+    haptic: androidx.compose.ui.hapticfeedback.HapticFeedback
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
                 onClick = {
-                    val local = when {
-                        allLocalItems.isNotEmpty() && allYtItems.isNotEmpty() -> Random.nextFloat() < 0.5
-                        allLocalItems.isNotEmpty() -> true
-                        else -> false
+                    if (isActive) {
+                        playerConnection.player.togglePlayPause()
+                    } else {
+                        playerConnection.playQueue(YouTubeQueue.radio(song.toMediaMetadata()))
                     }
-                    scope.launch(Dispatchers.Main) {
-                        if (local) {
-                            when (val luckyItem = allLocalItems.random()) {
-                                is Song -> playerConnection.playQueue(YouTubeQueue.radio(luckyItem.toMediaMetadata()))
-                                is Album -> {
-                                    val albumWithSongs = withContext(Dispatchers.IO) {
-                                        database.albumWithSongs(luckyItem.id).first()
-                                    }
-                                    albumWithSongs?.let {
-                                        playerConnection.playQueue(LocalAlbumRadio(it))
-                                    }
-                                }
-                                is Artist -> {}
-                                is Playlist -> {}
+                },
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    menuState.show {
+                        SongMenu(
+                            originalSong = song,
+                            navController = navController,
+                            onDismiss = menuState::dismiss
+                        )
+                    }
+                }
+            )
+            .padding(horizontal = 24.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFF14141A))
+                .border(1.dp, Color(0x14FFFFFF), RoundedCornerShape(8.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(song.song.thumbnailUrl)
+                    .crossfade(true)
+                    .build(),
+                placeholder = painterResource(R.drawable.ic_music_placeholder),
+                error = painterResource(R.drawable.ic_music_placeholder),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+
+            if (isActive && isPlaying) {
+                HomeEqIndicator(accent = accent)
+            }
+        }
+
+        Spacer(modifier = Modifier.width(14.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = song.song.title,
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    color = Color.White
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = song.artists.joinToString { it.name },
+                style = TextStyle(fontSize = 12.sp, color = Color.Gray),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Text(
+            text = com.aura.music.utils.makeTimeString(song.song.duration * 1000L),
+            style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = Color.Gray)
+        )
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Icon(
+            painter = painterResource(R.drawable.more_vert),
+            contentDescription = "Options",
+            tint = Color.Gray,
+            modifier = Modifier
+                .size(18.dp)
+                .clickable {
+                    menuState.show {
+                        SongMenu(
+                            originalSong = song,
+                            navController = navController,
+                            onDismiss = menuState::dismiss
+                        )
+                    }
+                }
+        )
+    }
+}
+
+@Composable
+fun HomeEqIndicator(accent: Color) {
+    val infiniteTransition = rememberInfiniteTransition(label = "eq")
+    val height1 by infiniteTransition.animateFloat(
+        initialValue = 8f,
+        targetValue = 24f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(450, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ), label = "eq1"
+    )
+    val height2 by infiniteTransition.animateFloat(
+        initialValue = 18f,
+        targetValue = 8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(400, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ), label = "eq2"
+    )
+    val height3 by infiniteTransition.animateFloat(
+        initialValue = 10f,
+        targetValue = 20f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(500, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ), label = "eq3"
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .padding(bottom = 6.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.Bottom
+    ) {
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(height1.dp)
+                .background(accent, RoundedCornerShape(1.dp))
+        )
+        Spacer(modifier = Modifier.width(2.dp))
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(height2.dp)
+                .background(accent, RoundedCornerShape(1.dp))
+        )
+        Spacer(modifier = Modifier.width(2.dp))
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(height3.dp)
+                .background(accent, RoundedCornerShape(1.dp))
+        )
+    }
+}
+
+@Composable
+fun HomeMadeForYouGrid(
+    playlists: List<com.aura.music.innertube.models.SongItem>,
+    surface: Color,
+    border: Color,
+    navController: NavController
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        val rows = playlists.chunked(2)
+        rows.forEach { rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                rowItems.forEach { playlist ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(surface)
+                            .border(1.dp, border, RoundedCornerShape(14.dp))
+                            .clickable { navController.navigate("search/${URLEncoder.encode(playlist.title, "UTF-8")}") }
+                    ) {
+                        Column {
+                            // Top cover placeholder
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(80.dp)
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(
+                                                Color(0xFF2C2C2E),
+                                                Color(0xFF0C0C0E)
+                                            )
+                                        )
+                                    )
+                            ) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(playlist.thumbnail)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
                             }
-                        } else {
-                            when (val luckyItem = allYtItems.random()) {
-                                is SongItem -> playerConnection.playQueue(YouTubeQueue.radio(luckyItem.toMediaMetadata()))
-                                is AlbumItem -> playerConnection.playQueue(YouTubeAlbumRadio(luckyItem.playlistId))
-                                is ArtistItem -> luckyItem.radioEndpoint?.let {
-                                    playerConnection.playQueue(YouTubeQueue(it))
-                                }
-                                is PlaylistItem -> luckyItem.playEndpoint?.let {
-                                    playerConnection.playQueue(YouTubeQueue(it))
-                                }
+                            Column(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+                            ) {
+                                Text(
+                                    text = playlist.title,
+                                    style = TextStyle(
+                                        fontFamily = FontFamily.SansSerif,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 13.sp,
+                                        color = Color.White
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = playlist.artists.joinToString { it.name },
+                                    style = TextStyle(fontSize = 11.sp, color = Color.Gray),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
                         }
                     }
                 }
-            )
-
-            Indicator(
-                isRefreshing = isRefreshing,
-                state = pullRefreshState,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(LocalPlayerAwareWindowInsets.current.asPaddingValues()),
-            )
+                if (rowItems.size < 2) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
         }
     }
 }

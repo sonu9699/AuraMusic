@@ -18,6 +18,16 @@ import android.graphics.ColorMatrixColorFilter
 import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.os.Build
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.geometry.center
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.SliderDefaults
+
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.infiniteRepeatable
@@ -59,12 +69,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.shape.CircleShape
+import coil3.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import com.aura.music.playback.PlayerConnection
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -99,10 +118,12 @@ import androidx.palette.graphics.Palette
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
+import coil3.request.crossfade
 import coil3.toBitmap
 import com.aura.music.LocalDownloadUtil
 import com.aura.music.LocalPlayerConnection
 import com.aura.music.R
+import com.aura.music.constants.CustomThemeColorKey
 import com.aura.music.constants.DarkModeKey
 import com.aura.music.constants.DisableBlurKey
 import com.aura.music.constants.PlayerBackgroundStyle
@@ -694,9 +715,38 @@ fun BottomSheetPlayer(
             )
         }
 
-// distance
+        val customThemeColorValue by rememberPreference(CustomThemeColorKey, defaultValue = "volt_neon")
+        val isVolt = customThemeColorValue == "volt_neon"
+        val isCrimson = customThemeColorValue == "crimson"
+        val accent = when {
+            isVolt -> Color(0xFFD2F535)
+            isCrimson -> Color(0xFFE8002D)
+            else -> MaterialTheme.colorScheme.primary
+        }
 
-        when (LocalConfiguration.current.orientation) {
+        if (!state.isCollapsed && (isVolt || isCrimson)) {
+            CustomMockupPlayer(
+                mediaMetadata = enrichedMetadata ?: mediaMetadata,
+                isPlaying = isPlaying,
+                positionMs = position,
+                durationMs = duration,
+                playbackState = playbackState,
+                liked = currentSongLiked,
+                accent = accent,
+                isVolt = isVolt,
+                isCrimson = isCrimson,
+                playerConnection = playerConnection,
+                navController = navController,
+                state = state,
+                queueSheetState = queueSheetState,
+                lyricsSheetState = lyricsSheetState,
+                menuState = menuState,
+                onSliderValueChange = onSliderValueChange,
+                onSliderValueChangeFinished = onSliderValueChangeFinished
+            )
+        } else {
+            // distance
+            when (LocalConfiguration.current.orientation) {
             Configuration.ORIENTATION_LANDSCAPE -> {
                 if (playerDesignStyle == PlayerDesignStyle.V5) {
                     enrichedMetadata?.let { metadata ->
@@ -850,6 +900,7 @@ fun BottomSheetPlayer(
                     }
                 }
             }
+        }
         }
 
         val queueOnBackgroundColor =
@@ -1293,6 +1344,534 @@ private fun MetroPlayerContent(
         }
     }
 }
+
+@Composable
+fun CustomMockupPlayer(
+    mediaMetadata: MediaMetadata?,
+    isPlaying: Boolean,
+    positionMs: Long,
+    durationMs: Long,
+    playbackState: Int,
+    liked: Boolean,
+    accent: Color,
+    isVolt: Boolean,
+    isCrimson: Boolean,
+    playerConnection: PlayerConnection,
+    navController: NavController,
+    state: BottomSheetState,
+    queueSheetState: BottomSheetState,
+    lyricsSheetState: BottomSheetState,
+    menuState: com.aura.music.ui.component.MenuState,
+    onSliderValueChange: (Long) -> Unit,
+    onSliderValueChangeFinished: () -> Unit
+) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val isLoading = playbackState == STATE_BUFFERING
+    val canSkipPrevious by playerConnection.canSkipPrevious.collectAsState()
+    val canSkipNext by playerConnection.canSkipNext.collectAsState()
+    val repeatMode by playerConnection.repeatMode.collectAsState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(bottom = queueSheetState.collapsedBound),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // 1. TOP BAR
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { state.collapseSoft() }) {
+                Icon(
+                    painter = painterResource(R.drawable.expand_more),
+                    contentDescription = "Collapse",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Text(
+                text = "NOW PLAYING",
+                style = TextStyle(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Gray,
+                    letterSpacing = 2.sp
+                )
+            )
+            IconButton(onClick = {
+                mediaMetadata?.let { meta ->
+                    menuState.show {
+                        com.aura.music.ui.menu.PlayerMenu(
+                            mediaMetadata = meta,
+                            navController = navController,
+                            playerBottomSheetState = state,
+                            onShowDetailsDialog = {},
+                            onDismiss = menuState::dismiss
+                        )
+                    }
+                }
+            }) {
+                Icon(
+                    painter = painterResource(R.drawable.more_vert),
+                    contentDescription = "Menu",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+
+        // 2. ALBUM ART SECTION
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            // Background glow aura
+            Box(
+                modifier = Modifier
+                    .size(320.dp)
+                    .background(
+                        Brush.radialGradient(
+                            colors = if (isCrimson) {
+                                listOf(Color(0xFFE8002D).copy(alpha = 0.15f), Color.Transparent)
+                            } else {
+                                listOf(Color(0xFF8B5CF6).copy(alpha = 0.15f), Color.Transparent)
+                            }
+                        )
+                    )
+            )
+            if (isVolt) {
+                RotatingCdDisc(thumbnailUrl = mediaMetadata?.thumbnailUrl, isPlaying = isPlaying, accent = accent)
+            } else {
+                CrimsonCover(thumbnailUrl = mediaMetadata?.thumbnailUrl, accent = accent)
+            }
+        }
+
+        // 3. SONG INFO SECTION
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = mediaMetadata?.title ?: "Unknown Song",
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 24.sp,
+                        color = Color.White
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = mediaMetadata?.artists?.joinToString { it.name } ?: "Unknown Artist",
+                    style = TextStyle(
+                        fontFamily = FontFamily.SansSerif,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 14.sp,
+                        color = Color.Gray
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                // Quality Badge
+                Box(
+                    modifier = Modifier
+                        .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = if (isVolt) "24-BIT LOSSLESS FLAC" else "HI-RES",
+                        style = TextStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.LightGray
+                        )
+                    )
+                }
+            }
+            IconButton(
+                onClick = { playerConnection.toggleLike() },
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    painter = painterResource(if (liked) R.drawable.favorite else R.drawable.favorite_border),
+                    contentDescription = "Like",
+                    tint = if (liked) accent else Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+
+        // 4. PROGRESS SECTION
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 12.dp)
+        ) {
+            val displayPositionMs = positionMs
+            val progressFraction = (displayPositionMs.toFloat() / durationMs.coerceAtLeast(1L)).coerceIn(0f, 1f)
+            
+            Slider(
+                value = progressFraction,
+                onValueChange = { onSliderValueChange((durationMs * it).toLong()) },
+                onValueChangeFinished = { onSliderValueChangeFinished() },
+                colors = SliderDefaults.colors(
+                    activeTrackColor = accent,
+                    inactiveTrackColor = Color(0xFF18181F),
+                    thumbColor = Color.White
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = com.aura.music.utils.makeTimeString(displayPositionMs),
+                    style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = Color.Gray)
+                )
+                Text(
+                    text = com.aura.music.utils.makeTimeString(durationMs),
+                    style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = Color.Gray)
+                )
+            }
+        }
+
+        // 5. MAIN CONTROLS
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { playerConnection.player.shuffleModeEnabled = !playerConnection.player.shuffleModeEnabled }) {
+                Icon(
+                    painter = painterResource(R.drawable.shuffle),
+                    contentDescription = "Shuffle",
+                    tint = if (playerConnection.player.shuffleModeEnabled) accent else Color.Gray,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            IconButton(
+                onClick = { playerConnection.seekToPrevious() },
+                enabled = canSkipPrevious
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.skip_previous),
+                    contentDescription = "Previous",
+                    tint = if (canSkipPrevious) Color.White else Color.DarkGray,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+            
+            // Play/Pause button with pulse glow
+            val pulseTransition = rememberInfiniteTransition(label = "pulse")
+            val pulseRadius by pulseTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = 10f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1200, easing = LinearEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "pulse_radius"
+            )
+
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .background(accent, CircleShape)
+                    .border(pulseRadius.dp, accent.copy(alpha = 0.3f), CircleShape)
+                    .clickable { playerConnection.player.togglePlayPause() },
+                contentAlignment = Alignment.Center
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(24.dp))
+                } else {
+                    Icon(
+                        painter = painterResource(if (isPlaying) R.drawable.pause else R.drawable.play),
+                        contentDescription = "Play/Pause",
+                        tint = if (isVolt) Color.Black else Color.White,
+                        modifier = Modifier.size(30.dp)
+                    )
+                }
+            }
+
+            IconButton(
+                onClick = { playerConnection.seekToNext() },
+                enabled = canSkipNext
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.skip_next),
+                    contentDescription = "Next",
+                    tint = if (canSkipNext) Color.White else Color.DarkGray,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+            IconButton(onClick = {
+                val nextRepeatMode = when (repeatMode) {
+                    androidx.media3.common.Player.REPEAT_MODE_OFF -> androidx.media3.common.Player.REPEAT_MODE_ALL
+                    androidx.media3.common.Player.REPEAT_MODE_ALL -> androidx.media3.common.Player.REPEAT_MODE_ONE
+                    else -> androidx.media3.common.Player.REPEAT_MODE_OFF
+                }
+                playerConnection.player.repeatMode = nextRepeatMode
+            }) {
+                Icon(
+                    painter = painterResource(
+                        when (repeatMode) {
+                            androidx.media3.common.Player.REPEAT_MODE_ONE -> R.drawable.repeat_one
+                            else -> R.drawable.repeat
+                        }
+                    ),
+                    contentDescription = "Repeat",
+                    tint = if (repeatMode != androidx.media3.common.Player.REPEAT_MODE_OFF) accent else Color.Gray,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+
+        // 6. SECONDARY CONTROLS (Lyrics/Queue Toggles & Waveform)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { lyricsSheetState.expandSoft() }) {
+                Icon(
+                    painter = painterResource(R.drawable.lyrics), // Lyrics
+                    contentDescription = "Lyrics",
+                    tint = Color.Gray,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            IconButton(onClick = { queueSheetState.expandSoft() }) {
+                Icon(
+                    painter = painterResource(R.drawable.volume_up), // Queue
+                    contentDescription = "Queue",
+                    tint = accent,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Waveform Animation
+        if (isPlaying) {
+            PlayerWaveform(accent = accent)
+        } else {
+            // Static waveform placeholder
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .padding(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                repeat(20) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(8.dp)
+                            .background(Color.Gray.copy(alpha = 0.3f), RoundedCornerShape(2.dp))
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 7. UP NEXT DRAWER HANDLE
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFF121216))
+                .border(1.dp, Color(0x14FFFFFF), RoundedCornerShape(16.dp))
+                .clickable { queueSheetState.expandSoft() }
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(width = 32.dp, height = 4.dp)
+                        .clip(RoundedCornerShape(99.dp))
+                        .background(Color(0x22FFFFFF))
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "UP NEXT",
+                    style = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 10.sp,
+                        color = Color.Gray,
+                        letterSpacing = 1.sp
+                    )
+                )
+            }
+            Icon(
+                painter = painterResource(R.drawable.expand_less),
+                contentDescription = "Open Queue",
+                tint = Color.Gray,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun RotatingCdDisc(thumbnailUrl: String?, isPlaying: Boolean, accent: Color) {
+    val infiniteTransition = rememberInfiniteTransition(label = "cd")
+    val rotationAngle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(if (isPlaying) 12000 else 0, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rotation"
+    )
+
+    Box(
+        modifier = Modifier
+            .size(280.dp)
+            .padding(12.dp)
+            .clip(CircleShape)
+            .border(3.dp, Color(0x14FFFFFF), CircleShape)
+            .background(Color.Black),
+        contentAlignment = Alignment.Center
+    ) {
+        // CD disc background with circular lines (vinyl texture)
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val cCenter = size.center
+            // Draw vinyl circular lines
+            for (r in 30..120 step 10) {
+                drawCircle(
+                    color = Color(0x0AFFFFFF),
+                    radius = r.dp.toPx(),
+                    style = Stroke(width = 1f)
+                )
+            }
+        }
+
+        // Center album artwork
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(thumbnailUrl)
+                .crossfade(true)
+                .build(),
+            placeholder = painterResource(R.drawable.ic_music_placeholder),
+            error = painterResource(R.drawable.ic_music_placeholder),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(140.dp)
+                .clip(CircleShape)
+                .graphicsLayer {
+                    rotationZ = rotationAngle
+                }
+        )
+
+        // Center hole of vinyl CD
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(Color.Black)
+                .border(2.dp, accent, CircleShape)
+        )
+    }
+}
+
+@Composable
+fun CrimsonCover(thumbnailUrl: String?, accent: Color) {
+    Box(
+        modifier = Modifier
+            .size(260.dp)
+            .padding(12.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.Black)
+            .border(1.dp, Color(0x14FFFFFF), RoundedCornerShape(16.dp))
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(thumbnailUrl)
+                .crossfade(true)
+                .build(),
+            placeholder = painterResource(R.drawable.ic_music_placeholder),
+            error = painterResource(R.drawable.ic_music_placeholder),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+}
+
+@Composable
+fun PlayerWaveform(accent: Color) {
+    val infiniteTransition = rememberInfiniteTransition(label = "waveform")
+    val heights = List(20) { index ->
+        val delay = (index * 50) % 300
+        val targetVal = when (index % 4) {
+            0 -> 38f
+            1 -> 24f
+            2 -> 30f
+            else -> 18f
+        }
+        infiniteTransition.animateFloat(
+            initialValue = 10f,
+            targetValue = targetVal,
+            animationSpec = infiniteRepeatable(
+                animation = tween(600 + delay, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "wave_$index"
+        )
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .padding(horizontal = 24.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        heights.forEach { animVal ->
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(animVal.value.dp)
+                    .background(accent, RoundedCornerShape(2.dp))
+            )
+        }
+    }
+}
+
 
 
 
