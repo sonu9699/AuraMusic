@@ -30,6 +30,7 @@ captures/
 *.keystore
 *.properties
 !gradle.properties
+!gradle/wrapper/gradle-wrapper.properties
 
 # --- Local dev environment folders ---
 /velune_temp/
