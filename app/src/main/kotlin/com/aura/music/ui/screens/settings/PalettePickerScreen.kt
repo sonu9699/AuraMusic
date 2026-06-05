@@ -123,6 +123,25 @@ data class ThemePalette(
 
 object ThemePalettes {
     
+    // ===== Special & Custom New UI =====
+    val VoltNeon = ThemePalette(
+        id = "volt_neon",
+        nameResId = R.string.palette_volt_neon,
+        primary = Color(0xFFD2F535),
+        secondary = Color(0xFF8B5CF6),
+        tertiary = Color(0xFFEC4899),
+        neutral = Color(0xFF09090C)
+    )
+
+    val Crimson = ThemePalette(
+        id = "crimson",
+        nameResId = R.string.palette_crimson,
+        primary = Color(0xFFE8002D),
+        secondary = Color(0xFFE8002D),
+        tertiary = Color(0xFFFFA000),
+        neutral = Color(0xFF0D0D0D)
+    )
+
     // ===== Classic & Default =====
     val Default = ThemePalette(
         id = "default",
@@ -748,6 +767,9 @@ object ThemePalettes {
     )
     
     val allPalettes: List<ThemePalette> = listOf(
+        // Custom New UI
+        VoltNeon,
+        Crimson,
         // Classic
         Default,
         // Blues
@@ -900,7 +922,7 @@ fun PalettePickerScreen(
     val scope = rememberCoroutineScope()
     val (customThemeColor, onCustomThemeColorChange) = rememberPreference(
         CustomThemeColorKey,
-        defaultValue = ThemePalettes.Default.id
+        defaultValue = "volt_neon"
     )
     
     val selectedPalette = remember(customThemeColor) {

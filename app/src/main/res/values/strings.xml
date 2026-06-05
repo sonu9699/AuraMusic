@@ -252,6 +252,8 @@
     <string name="palette_applied">Palette applied</string>
     <!-- Palette Names -->
     <string name="palette_default">Default</string>
+    <string name="palette_volt_neon">Volt Neon</string>
+    <string name="palette_crimson">Crimson Red</string>
     <!-- Blues -->
     <string name="palette_ocean_blue">Ocean Blue</string>
     <string name="palette_arctic_blue">Arctic</string>

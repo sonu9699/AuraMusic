@@ -506,8 +506,8 @@ class MainActivity : ComponentActivity() {
             // }
 
 
-            val enableDynamicTheme by rememberPreference(DynamicThemeKey, defaultValue = true)
-            val customThemeColorValue by rememberPreference(CustomThemeColorKey, defaultValue = "default")
+            val enableDynamicTheme by rememberPreference(DynamicThemeKey, defaultValue = false)
+            val customThemeColorValue by rememberPreference(CustomThemeColorKey, defaultValue = "volt_neon")
             val darkTheme by rememberEnumPreference(DarkModeKey, defaultValue = DarkMode.ON)
             val useSystemFont by rememberPreference(UseSystemFontKey, defaultValue = false)
             val isSystemInDarkTheme = isSystemInDarkTheme()
