@@ -10,6 +10,7 @@ package com.aura.music.ui.screens.search
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -301,15 +302,21 @@ fun SuggestionItem(
     pureBlack: Boolean
 ) {
     val iconContainerColor = if (pureBlack) {
-        Color.White.copy(alpha = 0.08f)
+        Color.White.copy(alpha = 0.06f)
     } else {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
     }
 
     val iconTint = if (pureBlack) {
-        Color.White.copy(alpha = 0.7f)
+        Color.White.copy(alpha = 0.8f)
     } else {
         MaterialTheme.colorScheme.primary
+    }
+
+    val borderStrokeColor = if (pureBlack) {
+        Color.White.copy(alpha = 0.05f)
+    } else {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
     }
 
     Row(
@@ -325,8 +332,9 @@ fun SuggestionItem(
                 .size(40.dp)
                 .background(
                     color = iconContainerColor,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(14.dp)
                 )
+                .border(1.dp, borderStrokeColor, RoundedCornerShape(14.dp))
         ) {
             Icon(
                 painterResource(if (online) R.drawable.search else R.drawable.history),
@@ -341,6 +349,7 @@ fun SuggestionItem(
         Text(
             text = query,
             style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
             color = if (pureBlack) Color.White.copy(alpha = 0.9f) else MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

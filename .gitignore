@@ -36,3 +36,12 @@ captures/
 /velune_temp/
 /jdk21/
 /stacktrace.txt
+
+# --- Node / Vite Ignores ---
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+*.log
+

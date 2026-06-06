@@ -59,7 +59,7 @@ object AuraMusicCanvas {
     )
 
     private val cache = ConcurrentHashMap<String, CacheEntry>()
-    private val ttlMs = 60_000L
+    private const val ttlMs = 600_000L /* 10 minutes TTL */
 
     suspend fun getBySongArtist(
         song: String,

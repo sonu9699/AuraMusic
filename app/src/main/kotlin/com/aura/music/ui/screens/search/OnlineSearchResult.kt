@@ -10,6 +10,8 @@ package com.aura.music.ui.screens.search
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -305,12 +307,13 @@ fun OnlineSearchResult(
     }
 
     Surface(
-        color = MaterialTheme.colorScheme.surface,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
         tonalElevation = 0.dp,
-        shadowElevation = 4.dp,
+        shadowElevation = 2.dp,
         modifier = Modifier
             .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top).add(WindowInsets(top = AppBarHeight)))
             .fillMaxWidth()
+            .border(0.5.dp, Color.White.copy(alpha = 0.06f))
     ) {
         ChipsRow(
             chips =

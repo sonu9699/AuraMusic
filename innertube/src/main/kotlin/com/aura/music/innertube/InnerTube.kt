@@ -148,7 +148,9 @@ class InnerTube {
         while (true) {
             try {
                 return block()
-            } catch (e: IOException) {
+            } catch (e: Exception) {
+                val isRetryable = e is IOException || e is io.ktor.client.plugins.ResponseException
+                if (!isRetryable) throw e
                 attempt++
                 if (attempt >= maxAttempts) throw e
                 delay(currentDelay)

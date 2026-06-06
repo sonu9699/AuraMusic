@@ -127,19 +127,19 @@ object ThemePalettes {
     val VoltNeon = ThemePalette(
         id = "volt_neon",
         nameResId = R.string.palette_volt_neon,
-        primary = Color(0xFFD2F535),
-        secondary = Color(0xFF8B5CF6),
-        tertiary = Color(0xFFEC4899),
-        neutral = Color(0xFF09090C)
+        primary = Color(0xFF7F56D9),
+        secondary = Color(0xFF6B4EFF),
+        tertiary = Color(0xFF9E77ED),
+        neutral = Color(0xFF0E0E10)
     )
 
     val Crimson = ThemePalette(
         id = "crimson",
         nameResId = R.string.palette_crimson,
         primary = Color(0xFFE8002D),
-        secondary = Color(0xFFE8002D),
-        tertiary = Color(0xFFFFA000),
-        neutral = Color(0xFF0D0D0D)
+        secondary = Color(0xFF9E1B24),
+        tertiary = Color(0xFFD9383A),
+        neutral = Color(0xFF0D0D0F)
     )
 
     // ===== Classic & Default =====

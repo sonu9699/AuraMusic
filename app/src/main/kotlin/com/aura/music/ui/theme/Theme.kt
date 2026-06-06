@@ -42,7 +42,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlin.math.abs
 import kotlin.math.min
 
-val DefaultThemeColor = Color(0xFFD2F535)
+val DefaultThemeColor = Color(0xFF8B5CF6)
 
 data class ThemeSeedPalette(
     val primary: Color,

@@ -109,26 +109,26 @@ fun HomeScreen(
     val isCrimson = customThemeColorValue == "crimson"
 
     val accent = when {
-        isVolt -> Color(0xFFD2F535)
+        isVolt -> Color(0xFF7F56D9)
         isCrimson -> Color(0xFFE8002D)
         else -> MaterialTheme.colorScheme.primary
     }
 
     val background = when {
-        isVolt -> Color(0xFF09090C)
-        isCrimson -> Color(0xFF0D0D0D)
+        isVolt -> Color(0xFF0E0E10)
+        isCrimson -> Color(0xFF0D0D0F)
         else -> MaterialTheme.colorScheme.background
     }
 
     val surface = when {
-        isVolt -> Color(0xDA121216)
-        isCrimson -> Color(0xDA151515)
+        isVolt -> Color(0xFF1E1E22)
+        isCrimson -> Color(0xFF1A1A1E)
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
 
     val border = when {
-        isVolt -> Color(0x14FFFFFF)
-        isCrimson -> Color(0x1A4A151B)
+        isVolt -> Color.White.copy(alpha = 0.08f)
+        isCrimson -> Color.White.copy(alpha = 0.06f)
         else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
     }
 
@@ -159,6 +159,22 @@ fun HomeScreen(
                 onRefresh = viewModel::refresh
             )
     ) {
+        // Ambient background gradient glow
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(280.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            accent.copy(alpha = 0.08f),
+                            accent.copy(alpha = 0.02f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+
         LazyColumn(
             state = lazyListState,
             modifier = Modifier
@@ -196,8 +212,9 @@ fun HomeScreen(
             item {
                 HomeFeaturedCard(
                     accent = accent,
-                    isVolt = isVolt,
-                    isCrimson = isCrimson,
+                    surface = surface,
+                    border = border,
+                    thumbnailUrl = quickPicks?.firstOrNull()?.song?.thumbnailUrl,
                     onPlayClick = {
                         quickPicks?.takeIf { it.isNotEmpty() }?.let { picks ->
                             playerConnection.playQueue(YouTubeQueue.radio(picks.first().toMediaMetadata()))
@@ -236,7 +253,8 @@ fun HomeScreen(
                         playerConnection = playerConnection,
                         navController = navController,
                         menuState = menuState,
-                        haptic = haptic
+                        haptic = haptic,
+                        modifier = Modifier.animateItem()
                     )
                 }
             }
@@ -325,28 +343,38 @@ fun HomeHeader(accent: Color, isVolt: Boolean, navController: NavController) {
 
 @Composable
 fun HomeGreetings() {
+    val greetingText = remember {
+        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        when (hour) {
+            in 0..11 -> "Good Morning"
+            in 12..16 -> "Good Afternoon"
+            else -> "Good Evening"
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 8.dp)
     ) {
         Text(
-            text = "Good Evening",
+            text = greetingText.uppercase(),
             style = TextStyle(
-                fontFamily = FontFamily.SansSerif,
-                fontWeight = FontWeight.Normal,
-                fontSize = 14.sp,
-                color = Color.Gray
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+                color = Color.Gray,
+                letterSpacing = 1.8.sp
             )
         )
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = "What do you want to hear?",
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 24.sp,
-                color = Color.White
+                fontWeight = FontWeight.Black,
+                fontSize = 26.sp,
+                color = Color.White,
+                letterSpacing = (-0.5).sp
             )
         )
     }
@@ -370,23 +398,25 @@ fun HomeFilterChips(
     ) {
         items(chips) { (chip, title) ->
             val isSelected = selectedChip == chip
+            val containerColor = if (isSelected) accent else Color.White.copy(alpha = 0.05f)
+            val borderColor = if (isSelected) accent else Color.White.copy(alpha = 0.08f)
+            val textColor = if (isSelected) Color.White else Color.Gray
+
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(99.dp))
-                    .background(if (isSelected) accent else Color.Transparent)
-                    .border(1.dp, if (isSelected) accent else Color(0x22FFFFFF), RoundedCornerShape(99.dp))
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(containerColor)
+                    .border(1.dp, borderColor, RoundedCornerShape(18.dp))
                     .clickable { onChipSelect(chip) }
-                    .padding(horizontal = 14.dp, vertical = 7.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(
                     text = title,
                     style = TextStyle(
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        fontSize = 11.sp,
-                        color = if (isSelected) {
-                            if (isVolt) Color.Black else Color.White
-                        } else Color.Gray
+                        fontFamily = FontFamily.SansSerif,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        fontSize = 12.sp,
+                        color = textColor
                     )
                 )
             }
@@ -402,10 +432,10 @@ fun HomeSearchBar(accent: Color, navController: NavController) {
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 8.dp)
             .height(52.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF121216))
-            .border(1.dp, Color(0x14FFFFFF), RoundedCornerShape(12.dp))
-            .padding(horizontal = 16.dp),
+            .clip(RoundedCornerShape(26.dp))
+            .background(Color.White.copy(alpha = 0.06f))
+            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(26.dp))
+            .padding(horizontal = 20.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         Row(
@@ -434,7 +464,7 @@ fun HomeSearchBar(accent: Color, navController: NavController) {
                 modifier = Modifier.weight(1f),
                 decorationBox = { innerTextField ->
                     if (queryText.isEmpty()) {
-                        Text("Search songs, artists...", color = Color.Gray, fontSize = 14.sp)
+                        Text("Search songs, albums, artists...", color = Color.Gray, fontSize = 14.sp)
                     }
                     innerTextField()
                 }
@@ -444,22 +474,20 @@ fun HomeSearchBar(accent: Color, navController: NavController) {
 }
 
 @Composable
-fun HomeFeaturedCard(accent: Color, isVolt: Boolean, isCrimson: Boolean, onPlayClick: () -> Unit) {
-    val bgGradient = if (isCrimson) {
-        Brush.verticalGradient(listOf(Color(0xFF1E080A), Color(0xFF0D0D0D)))
-    } else {
-        Brush.verticalGradient(listOf(Color(0xFF181124), Color(0xFF09090C)))
-    }
-
-    val borderColor = if (isCrimson) Color(0x40E8002D) else Color(0x408B5CF6)
-
+fun HomeFeaturedCard(
+    accent: Color,
+    surface: Color,
+    border: Color,
+    thumbnailUrl: String?,
+    onPlayClick: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 16.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(bgGradient)
-            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
+            .background(surface)
+            .border(1.dp, border, RoundedCornerShape(20.dp))
             .padding(20.dp)
     ) {
         Row(
@@ -470,29 +498,44 @@ fun HomeFeaturedCard(accent: Color, isVolt: Boolean, isCrimson: Boolean, onPlayC
                 modifier = Modifier
                     .size(80.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = if (isCrimson) {
-                                listOf(Color(0xFFE8002D), Color(0xFF800015))
-                            } else {
-                                listOf(Color(0xFF8B5CF6), Color(0xFFEC4899))
-                            }
-                        )
+                    .background(Color(0xFF2C2C2E))
+            ) {
+                if (thumbnailUrl != null) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(thumbnailUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
                     )
-            )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(Color(0xFF7F56D9), Color(0xFF6B4EFF))
+                                )
+                            )
+                    )
+                }
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "CURATED & TRENDING",
+                    text = "FEATURED MIX",
                     style = TextStyle(
                         fontFamily = FontFamily.Monospace,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Gray
+                        color = Color.Gray,
+                        letterSpacing = 1.sp
                     )
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Discover weekly",
+                    text = "Late Night Drive",
                     style = TextStyle(
                         fontFamily = FontFamily.SansSerif,
                         fontWeight = FontWeight.Black,
@@ -502,24 +545,24 @@ fun HomeFeaturedCard(accent: Color, isVolt: Boolean, isCrimson: Boolean, onPlayC
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "The original slow instrumental best playlists.",
+                    text = "12 songs • 48 min",
                     style = TextStyle(fontSize = 12.sp, color = Color.Gray),
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(99.dp))
-                        .background(accent)
+                        .background(Color.White)
                         .clickable { onPlayClick() }
-                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.play),
                         contentDescription = "Play",
-                        tint = if (isVolt) Color.Black else Color.White,
+                        tint = Color.Black,
                         modifier = Modifier.size(10.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -529,7 +572,7 @@ fun HomeFeaturedCard(accent: Color, isVolt: Boolean, isCrimson: Boolean, onPlayC
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 10.sp,
-                            color = if (isVolt) Color.Black else Color.White
+                            color = Color.Black
                         )
                     )
                 }
@@ -572,7 +615,7 @@ fun HomeHorizontalScroll(
 ) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 24.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(items) { item ->
             val title = when (item) {
@@ -604,8 +647,9 @@ fun HomeHorizontalScroll(
 
             Column(
                 modifier = Modifier
-                    .width(80.dp)
-                    .clickable { clickAction() }
+                    .width(90.dp)
+                    .clickable { clickAction() },
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -617,11 +661,11 @@ fun HomeHorizontalScroll(
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .border(1.dp, Color(0x14FFFFFF), RoundedCornerShape(10.dp))
+                        .size(90.dp)
+                        .clip(CircleShape)
+                        .border(1.dp, Color.White.copy(alpha = 0.08f), CircleShape)
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = title,
                     style = TextStyle(
@@ -630,14 +674,18 @@ fun HomeHorizontalScroll(
                         fontSize = 12.sp,
                         color = Color.White
                     ),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth()
                 )
                 Text(
                     text = subtitle,
                     style = TextStyle(fontSize = 11.sp, color = Color.Gray),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
@@ -654,10 +702,11 @@ fun HomeSongRow(
     playerConnection: com.aura.music.playback.PlayerConnection,
     navController: NavController,
     menuState: com.aura.music.ui.component.MenuState,
-    haptic: androidx.compose.ui.hapticfeedback.HapticFeedback
+    haptic: androidx.compose.ui.hapticfeedback.HapticFeedback,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .combinedClickable(
                 onClick = {
@@ -836,17 +885,17 @@ fun HomeMadeForYouGrid(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(14.dp))
+                            .clip(RoundedCornerShape(16.dp))
                             .background(surface)
-                            .border(1.dp, border, RoundedCornerShape(14.dp))
+                            .border(1.dp, border, RoundedCornerShape(16.dp))
                             .clickable { navController.navigate("search/${URLEncoder.encode(playlist.title, "UTF-8")}") }
                     ) {
                         Column {
-                            // Top cover placeholder
+                            // Top cover image with fallback gradient
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(80.dp)
+                                    .height(92.dp)
                                     .background(
                                         Brush.linearGradient(
                                             colors = listOf(
@@ -880,9 +929,14 @@ fun HomeMadeForYouGrid(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
+                                Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = playlist.artists.joinToString { it.name },
-                                    style = TextStyle(fontSize = 11.sp, color = Color.Gray),
+                                    style = TextStyle(
+                                        fontFamily = FontFamily.SansSerif,
+                                        fontSize = 11.sp, 
+                                        color = Color.Gray
+                                    ),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
